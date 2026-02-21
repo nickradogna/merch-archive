@@ -335,8 +335,8 @@ const uniqueArtists = new Set(
         if (!map.has(name)) map.set(name, []);
         map.get(name)!.push(row);
         return map;
-      }, new Map())
-    ).map(([artistName, rows]) => (
+      }, new Map<string, any[]>())
+    ) as [string, any[]][]).map(([artistName, rows]) => (
       <section key={artistName} style={{ marginBottom: 22 }}>
         <h2 style={{ marginTop: 18, marginBottom: 10 }}>{artistName}</h2>
         <ul>
