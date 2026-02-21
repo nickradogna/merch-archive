@@ -3,13 +3,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function ArtistPage({ params }: any) {
-  const unwrappedParams = React.use(params);
-  const slug = unwrappedParams.slug as string;
+export default function ArtistPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = React.use(params);
 
   const [artist, setArtist] = useState<any>(null);
   const [designs, setDesigns] = useState<any[]>([]);
   const [query, setQuery] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
