@@ -24,3 +24,117 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.design-card {
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  display: block;
+}
+
+.design-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+button {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:hover {
+  background: #f4f4f4;
+}
+
+button:active {
+  background: #eaeaea;
+}
+
+button {
+  all: unset;
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+}
+
+button:hover {
+  background: #f4f4f4;
+}
+
+button:active {
+  background: #eaeaea;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.button-primary {
+  background: #111;
+  color: #fff;
+  border: 1px solid #111;
+}
+
+.button-primary:hover {
+  background: #333;
+}
+
+.button-primary:active {
+  background: #000;
+}
+
+input,
+textarea,
+select {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #000;
+  font-size: 14px;
+}
+
+textarea {
+  min-height: 90px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+input[type="file"] {
+  all: unset;
+  font-size: 14px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  all: revert;
+  transform: scale(1.05);
+  cursor: pointer;
+}

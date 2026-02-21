@@ -25,10 +25,62 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+  style={{
+    margin: 0,
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    backgroundColor: "#f8f8f8",
+    color: "#111",
+  }}
+>
+  <div
+    style={{
+      maxWidth: 960,
+      margin: "0 auto",
+      padding: "40px 24px",
+    }}
+  >
+   <nav style={{ marginBottom: 28, display: "flex", gap: 14, alignItems: "baseline" }}>
+  <a href="/" style={{ textDecoration: "none", color: "inherit" }}>
+    <strong>Merch Archive</strong>
+  </a>
+
+  <a href="/artists" style={{ textDecoration: "none", color: "inherit" }}>
+    Artists
+  </a>
+
+  <a href="/search" style={{ textDecoration: "none", color: "inherit" }}>
+  Search
+</a>
+
+  <a href="/collection" style={{ textDecoration: "none", color: "inherit" }}>
+    My Collection
+  </a>
+
+  <a href="/wantlist" style={{ textDecoration: "none", color: "inherit" }}>
+  Wantlist
+</a>
+
+  <a href="/add-artist" style={{ textDecoration: "none", color: "inherit" }}>
+    Add Artist
+  </a>
+
+  <a href="/add-design" style={{ textDecoration: "none", color: "inherit" }}>
+    Add Design
+  </a>
+
+  <a href="/add-variant" style={{ textDecoration: "none", color: "inherit" }}>
+    Add Variant
+  </a>
+
+  <span style={{ marginLeft: "auto" }}>
+    <a href="/login" style={{ textDecoration: "none", color: "inherit" }}>
+      Login
+    </a>
+  </span>
+</nav>
+    {children}
+  </div>
+</body>
     </html>
   );
 }
