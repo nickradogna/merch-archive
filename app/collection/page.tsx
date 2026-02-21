@@ -148,6 +148,15 @@ const visibleItems = sortedItems
     onlyWithPhotos ? (ownershipPhotos[row.id] || []).length > 0 : true
   );
 
+  const groupedByArtist = Array.from(
+  visibleItems.reduce((map: Map<string, any[]>, row: any) => {
+    const name = row.variants.designs.artists.name as string;
+    if (!map.has(name)) map.set(name, []);
+    map.get(name)!.push(row);
+    return map;
+  }, new Map<string, any[]>())
+);
+
 const totalOwned = items.length;
 
 const withPhotos = items.filter(
@@ -329,14 +338,7 @@ const uniqueArtists = new Set(
 
 {groupByArtist && (
   <div>
-    {Array.from(
-      visibleItems.reduce((map: Map<string, any[]>, row: any) => {
-        const name = row.variants.designs.artists.name;
-        if (!map.has(name)) map.set(name, []);
-        map.get(name)!.push(row);
-        return map;
-      }, new Map<string, any[]>())
-    ) as [string, any[]][]).map(([artistName, rows]) => (
+    {groupedByArtist.map(([artistName, rows]) => (
       <section key={artistName} style={{ marginBottom: 22 }}>
         <h2 style={{ marginTop: 18, marginBottom: 10 }}>{artistName}</h2>
         <ul>
