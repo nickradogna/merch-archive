@@ -3,9 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function DesignPage({ params }: any) {
-  const unwrappedParams = React.use(params);
-const designId = unwrappedParams.id;
+export default function DesignPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: designId } = React.use(params);
 
   const [design, setDesign] = useState<any>(null);
   const [variants, setVariants] = useState<any[]>([]);
