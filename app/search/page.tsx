@@ -27,21 +27,35 @@ export default function SearchPage() {
     load();
   }, []);
 
-  const filteredArtists = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return [];
-    return artists
-      .filter((a) => a.name.toLowerCase().includes(query))
-      .slice(0, 10);
-  }, [artists, q]);
+  const tokens = useMemo(() => {
+  return q
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}, [q]);
+
+const filteredArtists = useMemo(() => {
+  if (!tokens.length) return [];
+
+  return artists
+    .filter((a) => {
+      const text = `${a.name}`.toLowerCase();
+      return tokens.every((t) => text.includes(t));
+    })
+    .slice(0, 10);
+}, [artists, tokens]);
 
   const filteredDesigns = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return [];
-    return designs
-      .filter((d) => `${d.year} ${d.title}`.toLowerCase().includes(query))
-      .slice(0, 20);
-  }, [designs, q]);
+  if (!tokens.length) return [];
+
+  return designs
+    .filter((d) => {
+      const text = `${d.artists?.name || ""} ${d.year || ""} ${d.title || ""}`.toLowerCase();
+      return tokens.every((t) => text.includes(t));
+    })
+    .slice(0, 20);
+}, [designs, tokens]);
 
   return (
     <main>
