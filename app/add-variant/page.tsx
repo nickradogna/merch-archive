@@ -43,15 +43,24 @@ export default function AddVariantPage() {
       return;
     }
 
-    const { error } = await supabase.from("variants").insert({
-      design_id: designId,
-      garment_type: garmentType.trim(),
-      base_color: baseColor.trim(),
-      cut: cut.trim(),
-      manufacturer: manufacturer.trim(),
-      print_method: printMethod.trim() || null,
-      notes: notes.trim() || null,
-    });
+    const { data: auth } = await supabase.auth.getUser();
+const userId = auth.user?.id;
+
+if (!userId) {
+  setMessage("Please sign in first.");
+  return;
+}
+
+const { error } = await supabase.from("variants").insert({
+  design_id: designId,
+  garment_type: garmentType.trim(),
+  base_color: baseColor.trim(),
+  cut: cut.trim(),
+  manufacturer: manufacturer.trim(),
+  print_method: printMethod.trim() || null,
+  notes: notes.trim() || null,
+  created_by: userId,
+});
 
     if (error) {
       setMessage(error.message);

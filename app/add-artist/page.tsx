@@ -197,13 +197,22 @@ export default function AddArtistPage() {
   }
 
   // ===== SAVE ARTIST =====
-  const { error } = await supabase.from("artists").insert({
-    name: finalName,
-    slug: finalSlug,
-    origin_country: countryRaw || null,
-    primary_genre: genreRaw || null,
-    photo_url: photoUrl,
-  });
+  const { data: auth } = await supabase.auth.getUser();
+const userId = auth.user?.id;
+
+if (!userId) {
+  setMessage("Please sign in first.");
+  return;
+}
+
+const { error } = await supabase.from("artists").insert({
+  name: finalName,
+  slug: finalSlug,
+  photo_url: photoUrl,
+  origin_country: originCountry?.trim() || null,
+  primary_genre: primaryGenre?.trim() || null,
+  created_by: userId,
+});
 
   if (error) {
     if ((error as any).code === "23505") {
