@@ -55,16 +55,17 @@ export default function ArtistsPage() {
       style={{ textDecoration: "none", color: "inherit" }}
     >
       <div
-        style={{
-          display: "flex",
-          gap: 12,
-          alignItems: "center",
-          padding: 12,
-          border: "1px solid #eee",
-          borderRadius: 12,
-          background: "#fff",
-        }}
-      >
+  className="artist-card"
+  style={{
+    display: "flex",
+    gap: 12,
+    alignItems: "center",
+    padding: 12,
+    border: "1px solid #eee",
+    borderRadius: 12,
+    background: "#fff",
+  }}
+>
         {artist.photo_url ? (
           <img
             src={artist.photo_url}

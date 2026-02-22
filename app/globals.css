@@ -177,3 +177,15 @@ input[type="radio"] {
   font-size: 13px;
   color: #666;
 }
+
+/* Artist card hover polish */
+
+.artist-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.artist-card:hover {
+  transform: translateY(-2px);
+  border-color: #ddd;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
