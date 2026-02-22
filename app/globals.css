@@ -682,8 +682,10 @@ input, textarea, select, button {
 /* Home page: center hero on mobile */
 @media (max-width: 640px) {
   .home .home-hero {
-    justify-content: center !important;
+    flex-direction: column;
+    align-items: center !important;
     text-align: center;
+    gap: 10px;
   }
 
   .home .home-hero h1 {
