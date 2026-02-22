@@ -332,3 +332,47 @@ input, textarea, select, button {
     gap: 10px !important;
   }
 }
+
+/* Collection: photo upload row (mobile-friendly) */
+.upload-row {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.upload-row input[type="text"] {
+  flex: 1 1 240px;
+  min-width: 220px;
+}
+
+.upload-row input[type="file"] {
+  flex: 0 1 220px;
+  min-width: 200px;
+}
+
+/* Make "Choose File" look like a button */
+.upload-row input[type="file"]::file-selector-button {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+}
+
+.upload-row input[type="file"]::file-selector-button:hover {
+  background: #f7f7f7;
+}
+
+@media (max-width: 640px) {
+  .upload-row {
+    align-items: stretch;
+  }
+
+  .upload-row input[type="text"],
+  .upload-row input[type="file"],
+  .upload-row button {
+    width: 100%;
+  }
+}

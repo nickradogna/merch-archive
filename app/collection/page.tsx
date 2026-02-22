@@ -287,10 +287,10 @@ const uniqueArtists = new Set(
           </div>
         )}
 
-        <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
+        <div className="upload-row">
           <input
             type="text"
-            placeholder="Label (condition, tag, damage)…"
+            placeholder="Label (front, back, tag)…"
             data-label
             style={{
               flex: 1,
