@@ -18,7 +18,7 @@ export default function RootLayout({
         style={{
           margin: 0,
           fontFamily: "system-ui, -apple-system, sans-serif",
-          backgroundColor: "#f8f8f8",
+          backgroundColor: "#f1f2f4",
           color: "#111",
         }}
       >
