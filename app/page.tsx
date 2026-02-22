@@ -41,8 +41,16 @@ export default function HomePage() {
   >([]);
 
     const [topArtists, setTopArtists] = useState<
-    Array<{ artist_id: string; artist_name: string; artist_slug: string; owned_count: number }>
-  >([]);
+  Array<{
+    artist_id: string;
+    artist_name: string;
+    artist_slug: string;
+    photo_url: string | null;
+    origin_country: string | null;
+    primary_genre: string | null;
+    owned_count: number;
+  }>
+>([]);
 
   useEffect(() => {
     async function load() {
