@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import NavLinks from "./NavLinks";
 
 export const metadata: Metadata = {
   title: "Merch Archive",
@@ -36,51 +37,7 @@ export default function RootLayout({
     marginBottom: 28,
   }}
 >
-            <nav
-              style={{
-                display: "flex",
-                gap: 14,
-                alignItems: "baseline",
-                flexWrap: "wrap",
-              }}
-            >
-              <a href="/" className="nav-brand">
-                Merch Archive
-              </a>
-
-              <a href="/artists" className="nav-link">
-                Artists
-              </a>
-
-              <a href="/users" className="nav-link">
-  Collectors
-</a>
-
-              <a href="/search" className="nav-link">
-                Search
-              </a>
-
-              <a href="/collection" className="nav-link">
-                My Collection
-              </a>
-
-              <a href="/wantlist" className="nav-link">
-                Wantlist
-              </a>
-
-              <a href="/add" className="nav-link">
-  Add
-</a>
-
-              <span style={{ marginLeft: "auto", display: "flex", gap: 14 }}>
-  <a href="/profile" className="nav-link">
-    Profile
-  </a>
-  <a href="/login" className="nav-link">
-    Login
-  </a>
-</span>
-            </nav>
+            <NavLinks />
           </header>
 
           {children}

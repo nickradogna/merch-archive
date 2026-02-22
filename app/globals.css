@@ -512,3 +512,30 @@ input, textarea, select, button {
   margin-top: auto;
   padding-top: 10px;
 }
+
+/* Nav: brand + active state */
+.nav-brand {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.nav-spacer {
+  flex: 1;
+}
+
+.nav-link {
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #e6e6e6;
+}
+
+.nav-active {
+  background: #fff;
+  border-color: #e2e2e2;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
