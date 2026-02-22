@@ -539,3 +539,60 @@ input, textarea, select, button {
   border-color: #e2e2e2;
   box-shadow: 0 6px 16px rgba(0,0,0,0.06);
 }
+
+/* ===== Nav (clean, non-bubbly active state) ===== */
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap; /* allows wrapping on smaller widths */
+}
+
+.nav-left,
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px; /* mild rounding, not pill */
+  text-decoration: none;
+  color: inherit;
+  line-height: 1.1;
+}
+
+.nav-brand {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* hover: subtle background only */
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* active: underline + slight emphasis (no bubble overlap) */
+.nav-active {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+}
+
+@media (max-width: 640px) {
+  .nav {
+    justify-content: center;
+  }
+
+  .nav-left,
+  .nav-right {
+    justify-content: center;
+  }
+}

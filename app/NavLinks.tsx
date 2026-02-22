@@ -5,53 +5,54 @@ import { usePathname } from "next/navigation";
 
 type Item = { href: string; label: string };
 
-const items: Item[] = [
-  { href: "/", label: "Home" },
+const leftItems: Item[] = [
   { href: "/artists", label: "Artists" },
   { href: "/search", label: "Search" },
   { href: "/collection", label: "My Collection" },
   { href: "/wantlist", label: "Wantlist" },
   { href: "/add", label: "Add" },
-  { href: "/users", label: "Collectors" },
+];
+
+const rightItems: Item[] = [
+  { href: "/profile", label: "Profile" },
+  { href: "/login", label: "Login" },
 ];
 
 export default function NavLinks() {
   const pathname = usePathname();
 
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
+
   return (
     <nav className="nav" aria-label="Primary">
-      <Link
-        href="/"
-        className={`nav-link nav-brand ${pathname === "/" ? "nav-active" : ""}`}
-      >
-        Merch Archive
-      </Link>
+      <div className="nav-left">
+        <Link href="/" className={`nav-link nav-brand ${pathname === "/" ? "nav-active" : ""}`}>
+          Merch Archive
+        </Link>
 
-      {items
-        .filter((i) => i.href !== "/")
-        .map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+        {leftItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`nav-link ${isActive(item.href) ? "nav-active" : ""}`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-link ${active ? "nav-active" : ""}`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-
-      <span className="nav-spacer" />
-
-      <Link
-        href="/login"
-        className={`nav-link ${pathname === "/login" ? "nav-active" : ""}`}
-      >
-        Login
-      </Link>
+      <div className="nav-right">
+        {rightItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`nav-link ${isActive(item.href) ? "nav-active" : ""}`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
     </nav>
   );
 }
