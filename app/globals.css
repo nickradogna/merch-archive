@@ -138,3 +138,22 @@ input[type="radio"] {
   transform: scale(1.05);
   cursor: pointer;
 }
+
+.nav-brand {
+  text-decoration: none;
+  color: #111;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: #555;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.nav-link:hover {
+  color: #111;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
