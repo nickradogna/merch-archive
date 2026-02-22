@@ -227,8 +227,11 @@ return {
   }, []);
 
   return (
-    <main style={{ padding: "3rem 2rem", maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <main
+  className="home"
+  style={{ padding: "3rem 2rem", maxWidth: 900, margin: "0 auto" }}
+>
+      <div className="home-hero" style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div
           style={{
             width: 14,
@@ -250,7 +253,7 @@ return {
         </h1>
       </div>
 
-      <p style={{ marginTop: 14, color: "#666", lineHeight: 1.6, maxWidth: 720 }}>
+      <p className="home-subtitle" style={{ marginTop: 14, color: "#666", lineHeight: 1.6, maxWidth: 720 }}>
         A clean, collector-first database for band merch—catalog designs, track variants,
         document your personal items, and preserve the story of how you got them.
       </p>
@@ -289,7 +292,7 @@ return {
       </div>
 
       {/* Quick actions */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
+      <div className="home-actions" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
         <a href="/artists">
           <button className="button-primary">Browse artists</button>
         </a>
@@ -528,7 +531,7 @@ return {
   )}
 </div>
 
-<p style={{ marginTop: 18, color: "#777", fontSize: 13, lineHeight: 1.6 }}>
+<p className="home-footer" style={{ marginTop: 18, color: "#777", fontSize: 13, lineHeight: 1.6 }}>
   Minimal by design. Community maintained. Built for collectors.
 </p>
       </div>
