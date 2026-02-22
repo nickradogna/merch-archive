@@ -12,6 +12,8 @@ type ProfileRow = {
   is_collection_public: boolean;
 };
 
+type TopBand = { name: string; count: number };
+
 export default function PublicProfilePage({
   params,
 }: {
@@ -21,12 +23,20 @@ export default function PublicProfilePage({
 
   const [viewerId, setViewerId] = useState<string | null>(null);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
+
   const [ownedCount, setOwnedCount] = useState<number | null>(null);
-  const [topBand, setTopBand] = useState<{ name: string; count: number } | null>(
-    null
-  );
+  const [topBand, setTopBand] = useState<TopBand | null>(null);
 
   const [items, setItems] = useState<any[]>([]);
+  const [view, setView] = useState<"list" | "grid">("grid");
+
+  const [ownershipPhotoMap, setOwnershipPhotoMap] = useState<
+    Record<string, string>
+  >({});
+  const [variantPhotoMap, setVariantPhotoMap] = useState<Record<string, string>>(
+    {}
+  );
+
   const [message, setMessage] = useState<string | null>(null);
 
   const isOwner = useMemo(() => {
@@ -34,13 +44,21 @@ export default function PublicProfilePage({
     return viewerId === profile.user_id;
   }, [viewerId, profile]);
 
+  function unwrapVariant(row: any) {
+    const v = Array.isArray(row?.variants) ? row.variants[0] : row?.variants;
+    const d = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
+    const a = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
+    return { v, d, a };
+  }
+
   useEffect(() => {
     async function load() {
       setMessage(null);
 
       // who is viewing?
       const { data: auth } = await supabase.auth.getUser();
-      setViewerId(auth.user?.id ?? null);
+      const viewer = auth.user?.id ?? null;
+      setViewerId(viewer);
 
       // profile by username
       const { data: profileData, error: profileErr } = await supabase
@@ -51,6 +69,11 @@ export default function PublicProfilePage({
 
       if (profileErr || !profileData) {
         setProfile(null);
+        setItems([]);
+        setOwnedCount(null);
+        setTopBand(null);
+        setOwnershipPhotoMap({});
+        setVariantPhotoMap({});
         setMessage("Profile not found.");
         return;
       }
@@ -58,25 +81,27 @@ export default function PublicProfilePage({
       setProfile(profileData as ProfileRow);
 
       // stats: total owned count
-      const { count } = await supabase
+      const { count: owned } = await supabase
         .from("ownership")
         .select("id", { count: "exact", head: true })
         .eq("user_id", profileData.user_id);
 
-      setOwnedCount(count ?? 0);
+      setOwnedCount(owned ?? 0);
 
-      // if not owner + collection is private, stop here
-      const canSeeCollection =
-        profileData.is_collection_public || auth.user?.id === profileData.user_id;
+      // can we show collection?
+      const canSee =
+        profileData.is_collection_public || viewer === profileData.user_id;
 
-      if (!canSeeCollection) {
+      if (!canSee) {
         setItems([]);
         setTopBand(null);
+        setOwnershipPhotoMap({});
+        setVariantPhotoMap({});
         return;
       }
 
       // load ownership items (keep it small + useful)
-      const { data: ownedRows } = await supabase
+      const { data: ownedRows, error: ownedErr } = await supabase
         .from("ownership")
         .select(
           `
@@ -84,7 +109,7 @@ export default function PublicProfilePage({
           variants (
             id, base_color, garment_type, manufacturer,
             designs (
-              id, year, title,
+              id, year, title, primary_photo_url,
               artists ( id, name, slug )
             )
           )
@@ -94,29 +119,88 @@ export default function PublicProfilePage({
         .order("created_at", { ascending: false })
         .limit(60);
 
+      if (ownedErr) {
+        setItems([]);
+        setTopBand(null);
+        setOwnershipPhotoMap({});
+        setVariantPhotoMap({});
+        setMessage(`Error loading collection: ${ownedErr.message}`);
+        return;
+      }
+
       const rows = ownedRows || [];
       setItems(rows);
 
-      // compute top band locally from the rows we fetched (handle object-or-array joins)
-const counts: Record<string, number> = {};
+      // -------- photo priority maps (ownership > variant > design) --------
+      try {
+        // 1) Ownership photos (user-uploaded item photos)
+        const ownershipIds = rows.map((r: any) => r.id).filter(Boolean);
 
-for (const r of rows) {
-  const v = Array.isArray(r?.variants) ? r.variants[0] : r?.variants;
-  const d = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
-  const a = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
+        if (ownershipIds.length) {
+          const { data: op, error: opErr } = await supabase
+            .from("ownership_photos")
+            .select("id, ownership_id, url, created_at")
+            .in("ownership_id", ownershipIds)
+            .order("created_at", { ascending: true });
 
-  const name: string | undefined = a?.name;
+          if (!opErr) {
+            const map: Record<string, string> = {};
+            (op || []).forEach((p: any) => {
+              if (!map[p.ownership_id] && p.url) map[p.ownership_id] = p.url;
+            });
+            setOwnershipPhotoMap(map);
+          } else {
+            setOwnershipPhotoMap({});
+          }
+        } else {
+          setOwnershipPhotoMap({});
+        }
 
-  if (!name) continue;
-  counts[name] = (counts[name] || 0) + 1;
-}
+        // 2) Variant photos via variant_photos table (optional; may not exist)
+        const variantIds = rows
+          .map((r: any) => {
+            const v = Array.isArray(r?.variants) ? r.variants[0] : r?.variants;
+            return v?.id;
+          })
+          .filter(Boolean);
 
-let best: { name: string; count: number } | null = null;
-for (const [name, c] of Object.entries(counts)) {
-  if (!best || c > best.count) best = { name, count: c };
-}
+        const vMap: Record<string, string> = {};
 
-setTopBand(best);
+        if (variantIds.length) {
+          const { data: vp, error: vpErr } = await supabase
+            .from("variant_photos")
+            .select("id, variant_id, url, created_at")
+            .in("variant_id", variantIds)
+            .order("created_at", { ascending: true });
+
+          // If table doesn't exist, vpErr will be set. We just skip.
+          if (!vpErr) {
+            (vp || []).forEach((p: any) => {
+              if (!vMap[p.variant_id] && p.url) vMap[p.variant_id] = p.url;
+            });
+          }
+        }
+
+        setVariantPhotoMap(vMap);
+      } catch {
+        setOwnershipPhotoMap({});
+        setVariantPhotoMap({});
+      }
+
+      // compute top band locally from rows (robust to object-or-array joins)
+      const counts: Record<string, number> = {};
+      for (const r of rows) {
+        const { a } = unwrapVariant(r);
+        const name: string | undefined = a?.name;
+        if (!name) continue;
+        counts[name] = (counts[name] || 0) + 1;
+      }
+
+      let best: TopBand | null = null;
+      for (const [name, c] of Object.entries(counts)) {
+        if (!best || c > best.count) best = { name, count: c };
+      }
+      setTopBand(best);
     }
 
     load();
@@ -132,12 +216,6 @@ setTopBand(best);
   }
 
   if (!profile) return <p style={{ color: "#666" }}>Loading…</p>;
-  function unwrapVariant(row: any) {
-  const v = Array.isArray(row?.variants) ? row.variants[0] : row?.variants;
-  const d = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
-  const a = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
-  return { v, d, a };
-}
 
   const canSeeCollection = profile.is_collection_public || isOwner;
 
@@ -222,9 +300,7 @@ setTopBand(best);
         </div>
 
         <div className="stat-card">
-          <div className="stat-number">
-            {topBand ? topBand.count : "—"}
-          </div>
+          <div className="stat-number">{topBand ? topBand.count : "—"}</div>
           <div className="stat-label">
             Top band{topBand ? `: ${topBand.name}` : ""}
           </div>
@@ -233,36 +309,96 @@ setTopBand(best);
 
       <h2 style={{ marginTop: 22 }}>Collection</h2>
 
+      <div className="view-toggle">
+        <button
+          className={view === "grid" ? "active" : ""}
+          onClick={() => setView("grid")}
+        >
+          Grid
+        </button>
+        <button
+          className={view === "list" ? "active" : ""}
+          onClick={() => setView("list")}
+        >
+          List
+        </button>
+      </div>
+
       {!canSeeCollection ? (
         <p style={{ color: "#666" }}>This collection is private.</p>
       ) : items.length ? (
-        <ul style={{ lineHeight: 1.7 }}>
-          {items.map((row) => {
-  const { v, d, a } = unwrapVariant(row);
+        view === "grid" ? (
+          <div className="collection-grid">
+            {items.map((row) => {
+              const { v, d, a } = unwrapVariant(row);
 
-  return (
-    <li key={row.id} style={{ marginBottom: 12 }}>
-      <strong>{a?.name || "Unknown artist"}</strong> — {d?.year} – {d?.title}
-      <br />
-      {v?.base_color} {v?.garment_type} — {v?.manufacturer}
-      <br />
-      Size: <strong>{row.size}</strong>
+              const ownershipImg = ownershipPhotoMap[row.id];
+              const variantImg = v?.id ? variantPhotoMap[v.id] : undefined;
+              const img = ownershipImg || variantImg || d?.primary_photo_url;
 
-      {row.memory && (
-        <>
-          <br />
-          <em>“{row.memory}”</em>
-        </>
-      )}
-    </li>
-  );
-})}
-        </ul>
+              return (
+                <div key={row.id} className="collection-tile">
+                  {img ? (
+                    <img src={img} alt={d?.title || "Design"} />
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "grid",
+                        placeItems: "center",
+                        color: "#777",
+                      }}
+                    >
+                      No photo
+                    </div>
+                  )}
+
+                  <div className="collection-overlay">
+                    <strong>{a?.name || "Unknown artist"}</strong>
+                    <div>
+                      {d?.year} – {d?.title}
+                    </div>
+                    <div>
+                      {v?.base_color} {v?.garment_type}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <ul style={{ lineHeight: 1.7 }}>
+            {items.map((row) => {
+              const { v, d, a } = unwrapVariant(row);
+
+              return (
+                <li key={row.id} style={{ marginBottom: 12 }}>
+                  <strong>{a?.name || "Unknown artist"}</strong> — {d?.year} –{" "}
+                  {d?.title}
+                  <br />
+                  {v?.base_color} {v?.garment_type} — {v?.manufacturer}
+                  <br />
+                  Size: <strong>{row.size}</strong>
+
+                  {row.memory && (
+                    <>
+                      <br />
+                      <em>“{row.memory}”</em>
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )
       ) : (
         <p style={{ color: "#666" }}>
           {isOwner ? "Your collection is empty." : "No items yet."}
         </p>
       )}
+
+      {message && <p style={{ color: "#666", marginTop: 14 }}>{message}</p>}
     </main>
   );
 }
