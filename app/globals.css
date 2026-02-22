@@ -416,3 +416,81 @@ input, textarea, select, button {
     aspect-ratio: 1 / 1;
   }
 }
+
+/* Center content inside Add hub cards */
+.add-card-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Add hub: vertically center content inside square cards (desktop + mobile) */
+.add-card {
+  display: block; /* keep it as a link */
+}
+
+.add-card-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Add hub: center title+desc, keep arrow at bottom */
+.add-card-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Center the title/desc block */
+.add-card-title,
+.add-card-desc {
+  text-align: center;
+}
+
+.add-card-title {
+  margin-top: auto;
+}
+
+.add-card-desc {
+  margin-bottom: auto;
+}
+
+/* Keep the arrow at the bottom */
+.add-card-arrow {
+  text-align: center;
+}
+
+/* Sticky, glassy nav header */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  /* “glass” layer */
+  background: rgba(248, 248, 248, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  /* make it feel like a layer */
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+
+  /* offset your existing layout padding */
+  margin-left: calc(var(--page-padding) * -1);
+  margin-right: calc(var(--page-padding) * -1);
+  padding-left: var(--page-padding);
+  padding-right: var(--page-padding);
+
+  /* keep nice spacing */
+  padding-top: 14px;
+}
+
+/* tighten header spacing on mobile */
+@media (max-width: 640px) {
+  .site-header {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+}

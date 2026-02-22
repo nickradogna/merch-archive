@@ -25,16 +25,17 @@ export default function RootLayout({
           style={{
             maxWidth: 960,
             margin: "0 auto",
-            padding: "40px 24px",
+            padding: "40px var(--page-padding)",
           }}
         >
           <header
-            style={{
-              borderBottom: "1px solid #eee",
-              paddingBottom: 16,
-              marginBottom: 28,
-            }}
-          >
+  className="site-header"
+  style={{
+    borderBottom: "1px solid #eee",
+    paddingBottom: 16,
+    marginBottom: 28,
+  }}
+>
             <nav
               style={{
                 display: "flex",
