@@ -95,10 +95,10 @@ const countMap: Record<string, number> = {};
       >
         {filtered.map((p) => (
           <a
-            key={p.user_id}
-            href={`/users/${p.username}`}
-            style={{ textDecoration: "none", color: "inherit" }}
-          >
+  key={p.user_id}
+  href={`/u/${p.username}`}
+  style={{ textDecoration: "none", color: "inherit" }}
+>
             <div
               className="artist-card"
               style={{

@@ -7,6 +7,7 @@ type Item = { href: string; label: string };
 
 const leftItems: Item[] = [
   { href: "/artists", label: "Artists" },
+  { href: "/users", label: "Collectors" },
   { href: "/search", label: "Search" },
   { href: "/collection", label: "My Collection" },
   { href: "/wantlist", label: "Wantlist" },
