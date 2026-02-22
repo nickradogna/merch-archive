@@ -325,3 +325,10 @@ input, textarea, select, button {
     justify-content: center;
   }
 }
+
+@media (max-width: 640px) {
+  .home-title-row {
+    flex-direction: column;
+    gap: 10px !important;
+  }
+}
