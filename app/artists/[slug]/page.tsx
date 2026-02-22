@@ -55,6 +55,24 @@ export default function ArtistPage({
     <main>
       <h1>{artist.name}</h1>
 
+      {artist.photo_url && (
+  <img
+    src={artist.photo_url}
+    alt={`${artist.name} photo`}
+    style={{
+      display: "block",
+      width: "100%",
+      maxWidth: 520,
+      height: "auto",
+      marginTop: 12,
+      marginBottom: 16,
+      borderRadius: 10,
+      border: "1px solid #e0e0e0",
+      background: "#f2f2f2",
+    }}
+  />
+)}
+
       <input
         placeholder="Search designs…"
         value={query}

@@ -18,30 +18,63 @@ export default function AddArtistPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   async function addArtist() {
-    setMessage(null);
+  setMessage(null);
 
-    const finalName = name.trim();
-    const finalSlug = slug.trim() || slugify(finalName);
+  const finalName = name.trim();
+  const finalSlug = slug.trim() || slugify(finalName);
 
-    if (!finalName) {
-      setMessage("Please enter an artist name.");
-      return;
-    }
-
-    const { error } = await supabase.from("artists").insert({
-      name: finalName,
-      slug: finalSlug,
-    });
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setName("");
-    setSlug("");
-    setMessage(`Added artist: ${finalName}`);
+  if (!finalName) {
+    setMessage("Please enter an artist name.");
+    return;
   }
+
+  // ===== ARTIST PHOTO UPLOAD (NEW) =====
+
+  let photoUrl: string | null = null;
+
+  const fileInput = document.getElementById(
+    "artist-photo-input"
+  ) as HTMLInputElement | null;
+
+  const file = fileInput?.files?.[0];
+
+  if (file) {
+    const ext = file.name.split(".").pop() || "jpg";
+    const filePath = `${finalSlug}/${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("artist-photos")
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      setMessage(uploadError.message);
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("artist-photos")
+      .getPublicUrl(filePath);
+
+    photoUrl = data.publicUrl;
+  }
+
+  // ===== SAVE ARTIST =====
+
+  const { error } = await supabase.from("artists").insert({
+    name: finalName,
+    slug: finalSlug,
+    photo_url: photoUrl,
+  });
+
+  if (error) {
+    setMessage(error.message);
+    return;
+  }
+
+  setName("");
+  setSlug("");
+  setMessage(`Added artist: ${finalName}`);
+}
 
   return (
     <main style={{ padding: "2rem", maxWidth: 520 }}>
@@ -68,6 +101,13 @@ export default function AddArtistPage() {
           onChange={(e) => setSlug(e.target.value)}
         />
       </label>
+
+      <div style={{ marginTop: 14 }}>
+  <label style={{ display: "block", marginBottom: 6 }}>
+    Artist photo (optional)
+  </label>
+  <input type="file" accept="image/*" id="artist-photo-input" />
+</div>
 
       <button onClick={addArtist}>Add Artist</button>
 
