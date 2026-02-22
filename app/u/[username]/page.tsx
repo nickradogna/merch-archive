@@ -97,18 +97,26 @@ export default function PublicProfilePage({
       const rows = ownedRows || [];
       setItems(rows);
 
-      // compute top band locally from the rows we fetched
-      const counts: Record<string, number> = {};
-      for (const r of rows) {
-        const name = r?.variants?.designs?.artists?.name;
-        if (!name) continue;
-        counts[name] = (counts[name] || 0) + 1;
-      }
-      let best: { name: string; count: number } | null = null;
-      for (const [name, c] of Object.entries(counts)) {
-        if (!best || c > best.count) best = { name, count: c };
-      }
-      setTopBand(best);
+      // compute top band locally from the rows we fetched (handle object-or-array joins)
+const counts: Record<string, number> = {};
+
+for (const r of rows) {
+  const v = Array.isArray(r?.variants) ? r.variants[0] : r?.variants;
+  const d = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
+  const a = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
+
+  const name: string | undefined = a?.name;
+
+  if (!name) continue;
+  counts[name] = (counts[name] || 0) + 1;
+}
+
+let best: { name: string; count: number } | null = null;
+for (const [name, c] of Object.entries(counts)) {
+  if (!best || c > best.count) best = { name, count: c };
+}
+
+setTopBand(best);
     }
 
     load();
@@ -124,6 +132,12 @@ export default function PublicProfilePage({
   }
 
   if (!profile) return <p style={{ color: "#666" }}>Loading…</p>;
+  function unwrapVariant(row: any) {
+  const v = Array.isArray(row?.variants) ? row.variants[0] : row?.variants;
+  const d = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
+  const a = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
+  return { v, d, a };
+}
 
   const canSeeCollection = profile.is_collection_public || isOwner;
 
@@ -223,23 +237,26 @@ export default function PublicProfilePage({
         <p style={{ color: "#666" }}>This collection is private.</p>
       ) : items.length ? (
         <ul style={{ lineHeight: 1.7 }}>
-          {items.map((row) => (
-            <li key={row.id} style={{ marginBottom: 12 }}>
-              <strong>{row.variants.designs.artists.name}</strong> —{" "}
-              {row.variants.designs.year} – {row.variants.designs.title}
-              <br />
-              {row.variants.base_color} {row.variants.garment_type} —{" "}
-              {row.variants.manufacturer}
-              <br />
-              Size: <strong>{row.size}</strong>
-              {row.memory && (
-                <>
-                  <br />
-                  <em>“{row.memory}”</em>
-                </>
-              )}
-            </li>
-          ))}
+          {items.map((row) => {
+  const { v, d, a } = unwrapVariant(row);
+
+  return (
+    <li key={row.id} style={{ marginBottom: 12 }}>
+      <strong>{a?.name || "Unknown artist"}</strong> — {d?.year} – {d?.title}
+      <br />
+      {v?.base_color} {v?.garment_type} — {v?.manufacturer}
+      <br />
+      Size: <strong>{row.size}</strong>
+
+      {row.memory && (
+        <>
+          <br />
+          <em>“{row.memory}”</em>
+        </>
+      )}
+    </li>
+  );
+})}
         </ul>
       ) : (
         <p style={{ color: "#666" }}>
