@@ -51,6 +51,10 @@ export default function RootLayout({
                 Artists
               </a>
 
+              <a href="/users" className="nav-link">
+  Collectors
+</a>
+
               <a href="/search" className="nav-link">
                 Search
               </a>
