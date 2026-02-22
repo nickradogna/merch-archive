@@ -40,15 +40,69 @@ export default function ArtistsPage() {
         }}
       />
 
-      <ul style={{ lineHeight: 1.8 }}>
-        {filtered.map((artist) => (
-          <li key={artist.id}>
-            <a href={`/artists/${artist.slug}`} style={{ color: "inherit" }}>
-              {artist.name}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+    gap: 14,
+    marginTop: 8,
+  }}
+>
+  {filtered.map((artist) => (
+    <a
+      key={artist.id}
+      href={`/artists/${artist.slug}`}
+      style={{ textDecoration: "none", color: "inherit" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          padding: 12,
+          border: "1px solid #eee",
+          borderRadius: 12,
+          background: "#fff",
+        }}
+      >
+        {artist.photo_url ? (
+          <img
+            src={artist.photo_url}
+            alt={`${artist.name} photo`}
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: 10,
+              objectFit: "cover",
+              border: "1px solid #e0e0e0",
+              background: "#f2f2f2",
+              flex: "0 0 auto",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: 10,
+              border: "1px solid #e0e0e0",
+              background: "#f2f2f2",
+              display: "grid",
+              placeItems: "center",
+              color: "#777",
+              fontSize: 12,
+              flex: "0 0 auto",
+            }}
+          >
+            —
+          </div>
+        )}
+
+        <div style={{ fontWeight: 600 }}>{artist.name}</div>
+      </div>
+    </a>
+  ))}
+</div>
     </main>
   );
 }
