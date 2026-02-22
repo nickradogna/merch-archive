@@ -39,45 +39,53 @@ export default function RootLayout({
       padding: "40px 24px",
     }}
   >
-   <nav style={{ marginBottom: 28, display: "flex", gap: 14, alignItems: "baseline" }}>
-  <a href="/" style={{ textDecoration: "none", color: "inherit" }}>
-    <strong>Merch Archive</strong>
-  </a>
-
-  <a href="/artists" style={{ textDecoration: "none", color: "inherit" }}>
-    Artists
-  </a>
-
-  <a href="/search" style={{ textDecoration: "none", color: "inherit" }}>
-  Search
-</a>
-
-  <a href="/collection" style={{ textDecoration: "none", color: "inherit" }}>
-    My Collection
-  </a>
-
-  <a href="/wantlist" style={{ textDecoration: "none", color: "inherit" }}>
-  Wantlist
-</a>
-
-  <a href="/add-artist" style={{ textDecoration: "none", color: "inherit" }}>
-    Add Artist
-  </a>
-
-  <a href="/add-design" style={{ textDecoration: "none", color: "inherit" }}>
-    Add Design
-  </a>
-
-  <a href="/add-variant" style={{ textDecoration: "none", color: "inherit" }}>
-    Add Variant
-  </a>
-
-  <span style={{ marginLeft: "auto" }}>
-    <a href="/login" style={{ textDecoration: "none", color: "inherit" }}>
-      Login
+   <header
+  style={{
+    borderBottom: "1px solid #eee",
+    paddingBottom: 16,
+    marginBottom: 28,
+  }}
+>
+  <nav style={{ display: "flex", gap: 14, alignItems: "baseline", flexWrap: "wrap" }}>
+    <a href="/" style={{ textDecoration: "none", color: "inherit", fontWeight: 800 }}>
+      Merch Archive
     </a>
-  </span>
-</nav>
+
+    <a href="/artists" style={{ textDecoration: "none", color: "inherit" }}>
+      Artists
+    </a>
+
+    <a href="/search" style={{ textDecoration: "none", color: "inherit" }}>
+      Search
+    </a>
+
+    <a href="/collection" style={{ textDecoration: "none", color: "inherit" }}>
+      My Collection
+    </a>
+
+    <a href="/wantlist" style={{ textDecoration: "none", color: "inherit" }}>
+      Wantlist
+    </a>
+
+    <a href="/add-artist" style={{ textDecoration: "none", color: "inherit" }}>
+      Add Artist
+    </a>
+
+    <a href="/add-design" style={{ textDecoration: "none", color: "inherit" }}>
+      Add Design
+    </a>
+
+    <a href="/add-variant" style={{ textDecoration: "none", color: "inherit" }}>
+      Add Variant
+    </a>
+
+    <span style={{ marginLeft: "auto" }}>
+      <a href="/login" style={{ textDecoration: "none", color: "inherit" }}>
+        Login
+      </a>
+    </span>
+  </nav>
+</header>
     {children}
   </div>
 </body>
