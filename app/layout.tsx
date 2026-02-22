@@ -67,17 +67,9 @@ export default function RootLayout({
                 Wantlist
               </a>
 
-              <a href="/add-artist" className="nav-link">
-                Add Artist
-              </a>
-
-              <a href="/add-design" className="nav-link">
-                Add Design
-              </a>
-
-              <a href="/add-variant" className="nav-link">
-                Add Variant
-              </a>
+              <a href="/add" className="nav-link">
+  Add
+</a>
 
               <span style={{ marginLeft: "auto", display: "flex", gap: 14 }}>
   <a href="/profile" className="nav-link">
