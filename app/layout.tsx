@@ -75,11 +75,14 @@ export default function RootLayout({
                 Add Variant
               </a>
 
-              <span style={{ marginLeft: "auto" }}>
-                <a href="/login" className="nav-link">
-                  Login
-                </a>
-              </span>
+              <span style={{ marginLeft: "auto", display: "flex", gap: 14 }}>
+  <a href="/profile" className="nav-link">
+    Profile
+  </a>
+  <a href="/login" className="nav-link">
+    Login
+  </a>
+</span>
             </nav>
           </header>
 
