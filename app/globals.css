@@ -310,3 +310,18 @@ input, textarea, select, button {
 .nav-link:active {
   background: rgba(0, 0, 0, 0.06);
 }
+
+/* Home page mobile centering */
+@media (max-width: 640px) {
+  .home-page {
+    text-align: center;
+  }
+
+  .home-title-row {
+    justify-content: center;
+  }
+
+  .home-actions {
+    justify-content: center;
+  }
+}

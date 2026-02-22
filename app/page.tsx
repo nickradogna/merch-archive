@@ -51,8 +51,8 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main style={{ padding: "3rem 2rem", maxWidth: 900, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <main className="home-page" style={{ padding: "3rem 2rem", maxWidth: 900, margin: "0 auto" }}>
+      <div className="home-title-row" style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div
           style={{
             width: 14,
@@ -113,7 +113,7 @@ export default function HomePage() {
       </div>
 
       {/* Quick actions */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
+      <div className="home-actions" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
         <a href="/artists">
           <button className="button-primary">Browse artists</button>
         </a>
@@ -123,9 +123,9 @@ export default function HomePage() {
         <a href="/wantlist">
           <button>Wantlist</button>
         </a>
-        <a href="/add-artist">
-          <button>Add artist</button>
-        </a>
+        <a href="/add">
+  <button>Add +</button>
+</a>
       </div>
 
       <div style={{ marginTop: 28, borderTop: "1px solid #eee", paddingTop: 18 }}>
