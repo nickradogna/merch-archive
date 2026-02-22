@@ -40,6 +40,10 @@ export default function HomePage() {
     }>
   >([]);
 
+    const [topArtists, setTopArtists] = useState<
+    Array<{ artist_id: string; artist_name: string; artist_slug: string; owned_count: number }>
+  >([]);
+
   useEffect(() => {
     async function load() {
       // ---------- stats ----------
@@ -200,6 +204,15 @@ return {
         .slice(0, 12);
 
       setRecent(feed);
+
+            // ---------- top artists by total ownership ----------
+      const { data: topData } = await supabase
+        .from("artist_ownership_counts")
+        .select("artist_id, artist_name, artist_slug, photo_url, origin_country, primary_genre, owned_count")
+        .order("owned_count", { ascending: false })
+        .limit(10);
+
+      setTopArtists((topData as any[]) || []);
     }
 
     load();
@@ -411,9 +424,105 @@ return {
           </p>
         )}
 
-        <p style={{ marginTop: 18, color: "#777", fontSize: 13, lineHeight: 1.6 }}>
-          Minimal by design. Community maintained. Built for collectors.
-        </p>
+        {/* Top artists */}
+<div style={{ marginTop: 22 }}>
+  <h2 style={{ margin: "0 0 10px 0" }}>Top artists by total ownership</h2>
+
+  {topArtists.length ? (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+        gap: 14,
+        marginTop: 8,
+      }}
+    >
+      {topArtists.map((a) => (
+        <a
+          key={a.artist_id}
+          href={`/artists/${a.artist_slug}`}
+          style={{ textDecoration: "none", color: "inherit" }}
+        >
+          <div
+            className="artist-card"
+            style={{
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              padding: 12,
+              border: "1px solid #eee",
+              borderRadius: 12,
+              background: "#fff",
+            }}
+          >
+            {a.photo_url ? (
+              <img
+                src={a.photo_url}
+                alt={`${a.artist_name} photo`}
+                style={{
+                  width: 54,
+                  height: 54,
+                  borderRadius: 10,
+                  objectFit: "cover",
+                  border: "1px solid #e0e0e0",
+                  background: "#f2f2f2",
+                  flex: "0 0 auto",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 54,
+                  height: 54,
+                  borderRadius: 10,
+                  border: "1px solid #e0e0e0",
+                  background: "#f2f2f2",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "#777",
+                  fontSize: 12,
+                  flex: "0 0 auto",
+                }}
+              >
+                —
+              </div>
+            )}
+
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, display: "flex", gap: 8 }}>
+                <span
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {a.artist_name}
+                </span>
+
+                <span style={{ color: "#777", fontSize: 12, whiteSpace: "nowrap" }}>
+                  {a.owned_count}
+                </span>
+              </div>
+
+              {(a.origin_country || a.primary_genre) && (
+                <div style={{ color: "#777", fontSize: 13, marginTop: 4 }}>
+                  {[a.origin_country, a.primary_genre].filter(Boolean).join(" · ")}
+                </div>
+              )}
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  ) : (
+    <p style={{ color: "#666", marginTop: 8 }}>No ownership data yet.</p>
+  )}
+</div>
+
+<p style={{ marginTop: 18, color: "#777", fontSize: 13, lineHeight: 1.6 }}>
+  Minimal by design. Community maintained. Built for collectors.
+</p>
       </div>
     </main>
   );
