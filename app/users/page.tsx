@@ -8,8 +8,8 @@ type Profile = {
   username: string;
   bio: string | null;
   avatar_url: string | null;
-  link_url: string | null;
   is_collection_public: boolean | null;
+  item_count?: number;
 };
 
 export default function UsersPage() {
@@ -18,12 +18,39 @@ export default function UsersPage() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
+      // Load profiles
+      const { data: profileRows } = await supabase
         .from("profiles")
         .select("user_id,username,bio,avatar_url,is_collection_public")
-        .order("username", { ascending: true });
+        .order("username");
 
-      setProfiles((data as any) || []);
+      const rows = (profileRows as Profile[]) || [];
+
+      if (rows.length === 0) {
+        setProfiles([]);
+        return;
+      }
+
+      // Get item counts per user (from a DB view)
+const { data: counts } = await supabase
+  .from("ownership_counts")
+  .select("user_id,item_count")
+  .in(
+    "user_id",
+    rows.map((r) => r.user_id)
+  );
+
+const countMap: Record<string, number> = {};
+(counts as any[] | null)?.forEach((c) => {
+  countMap[c.user_id] = c.item_count || 0;
+});
+
+      const merged = rows.map((p) => ({
+        ...p,
+        item_count: countMap[p.user_id] || 0,
+      }));
+
+      setProfiles(merged);
     }
 
     load();
@@ -114,13 +141,16 @@ export default function UsersPage() {
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 700 }}>{p.username}</div>
                 <div style={{ color: "#666", fontSize: 13, marginTop: 4 }}>
-                  {p.bio ? p.bio : "—"}
+                  {p.bio || "—"}
                 </div>
-                {p.is_collection_public === false && (
-                  <div style={{ color: "#999", fontSize: 12, marginTop: 4 }}>
-                    Collection private
-                  </div>
-                )}
+
+                <div style={{ fontSize: 12, marginTop: 6, color: "#777" }}>
+                  {p.is_collection_public === false
+                    ? "Collection private"
+                    : `${p.item_count || 0} item${
+                        p.item_count === 1 ? "" : "s"
+                      }`}
+                </div>
               </div>
             </div>
           </a>
