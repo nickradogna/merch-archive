@@ -17,15 +17,19 @@ export default function ArtistPage({
 
   useEffect(() => {
     async function load() {
-      const { data: artistData } = await supabase
+      const { data: artistData, error } = await supabase
         .from("artists")
-        .select("*")
+        .select("id,name,slug,photo_url,origin_country,primary_genre")
         .eq("slug", slug)
         .single();
 
-      setArtist(artistData);
+      if (error) {
+        setMessage(error.message);
+        setArtist(null);
+        return;
+      }
 
-      if (!artistData) return;
+      setArtist(artistData);
 
       const { data: designsData } = await supabase
         .from("designs")
@@ -49,29 +53,37 @@ export default function ArtistPage({
     });
   }, [designs, query]);
 
-  if (!artist) return <p>Loading…</p>;
+  if (!artist) return <p style={{ color: "#666" }}>Loading…</p>;
 
   return (
     <main>
-      <h1>{artist.name}</h1>
+      <h1 style={{ marginBottom: 6 }}>{artist.name}</h1>
+
+      {(artist.origin_country || artist.primary_genre) && (
+        <div style={{ color: "#666", marginBottom: 12 }}>
+          {[artist.origin_country, artist.primary_genre]
+            .filter(Boolean)
+            .join(" · ")}
+        </div>
+      )}
 
       {artist.photo_url && (
-  <img
-    src={artist.photo_url}
-    alt={`${artist.name} photo`}
-    style={{
-      display: "block",
-      width: "100%",
-      maxWidth: 520,
-      height: "auto",
-      marginTop: 12,
-      marginBottom: 16,
-      borderRadius: 10,
-      border: "1px solid #e0e0e0",
-      background: "#f2f2f2",
-    }}
-  />
-)}
+        <img
+          src={artist.photo_url}
+          alt={`${artist.name} photo`}
+          style={{
+            display: "block",
+            width: "100%",
+            maxWidth: 520,
+            height: "auto",
+            marginTop: 12,
+            marginBottom: 16,
+            borderRadius: 10,
+            border: "1px solid #e0e0e0",
+            background: "#f2f2f2",
+          }}
+        />
+      )}
 
       <input
         placeholder="Search designs…"
@@ -142,6 +154,8 @@ export default function ArtistPage({
           </a>
         ))}
       </div>
+
+      {message && <p style={{ marginTop: 12 }}>{message}</p>}
     </main>
   );
 }
