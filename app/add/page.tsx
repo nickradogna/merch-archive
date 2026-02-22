@@ -1,26 +1,4 @@
 export default function AddHubPage() {
-  const cardStyle: React.CSSProperties = {
-    display: "block",
-    textDecoration: "none",
-    color: "inherit",
-    border: "1px solid #eee",
-    borderRadius: 14,
-    background: "#fff",
-    padding: 18,
-    minHeight: 170,
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontSize: 20,
-    fontWeight: 800,
-    marginBottom: 8,
-  };
-
-  const descStyle: React.CSSProperties = {
-    color: "#666",
-    lineHeight: 1.4,
-  };
-
   return (
     <main>
       <h1>Add</h1>
@@ -29,32 +7,37 @@ export default function AddHubPage() {
         duplicates.
       </p>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: 14,
-          marginTop: 18,
-        }}
-      >
-        <a href="/add-design" className="hover-outline" style={cardStyle}>
-          <div style={titleStyle}>Design</div>
-          <div style={descStyle}>
-            Add a new design to an artist’s catalog (title, year, primary photo).
+      <div className="add-grid">
+        <a href="/add-design" className="add-card">
+          <div className="add-card-inner">
+            <h2 className="add-card-title">Design</h2>
+            <p className="add-card-desc">
+              Add a new design to an artist’s catalog (title, year, primary
+              photo).
+            </p>
+            <div className="add-card-arrow">Add a design →</div>
           </div>
         </a>
 
-        <a href="/add-variant" className="hover-outline" style={cardStyle}>
-          <div style={titleStyle}>Variant</div>
-          <div style={descStyle}>
-            Add a color / garment / manufacturer variant under an existing design.
+        <a href="/add-variant" className="add-card">
+          <div className="add-card-inner">
+            <h2 className="add-card-title">Variant</h2>
+            <p className="add-card-desc">
+              Add a color / garment / manufacturer variant under an existing
+              design.
+            </p>
+            <div className="add-card-arrow">Add a variant →</div>
           </div>
         </a>
 
-        <a href="/add-artist" className="hover-outline" style={cardStyle}>
-          <div style={titleStyle}>Artist</div>
-          <div style={descStyle}>
-            Add a new artist. Please double-check they don’t already exist first.
+        <a href="/add-artist" className="add-card">
+          <div className="add-card-inner">
+            <h2 className="add-card-title">Artist</h2>
+            <p className="add-card-desc">
+              Add a new artist. Please double-check they don’t already exist
+              first.
+            </p>
+            <div className="add-card-arrow">Add an artist →</div>
           </div>
         </a>
       </div>

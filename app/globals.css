@@ -189,3 +189,54 @@ input[type="radio"] {
   border-color: #ddd;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
+
+/* Add hub cards */
+.add-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.add-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #eee;
+  border-radius: 14px;
+  background: #fff;
+  padding: 18px;
+  aspect-ratio: 1 / 1; /* makes them square */
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.add-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.add-card-title {
+  font-size: 20px;
+  font-weight: 850;
+  margin: 0 0 10px 0;
+}
+
+.add-card-desc {
+  color: #666;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 34ch;
+}
+
+.add-card-arrow {
+  margin-top: auto;
+  color: #777;
+  font-size: 13px;
+}
+
+.add-card-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
