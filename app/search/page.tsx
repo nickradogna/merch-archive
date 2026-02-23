@@ -15,10 +15,13 @@ export default function SearchPage() {
         .select("id,name,slug")
         .order("name");
 
+      // Year is no longer part of the "display name" for designs.
+      // We still fetch circa (and year as fallback for older rows),
+      // but we do NOT display it in the list.
       const { data: designData } = await supabase
         .from("designs")
-        .select("id,title,year, artists(name,slug)")
-        .order("year", { ascending: false });
+        .select("id,title,circa,year, artists(name,slug)")
+        .order("created_at", { ascending: false });
 
       setArtists(artistData || []);
       setDesigns(designData || []);
@@ -28,41 +31,43 @@ export default function SearchPage() {
   }, []);
 
   const tokens = useMemo(() => {
-  return q
-    .toLowerCase()
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-}, [q]);
+    return q
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+  }, [q]);
 
-const filteredArtists = useMemo(() => {
-  if (!tokens.length) return [];
+  const filteredArtists = useMemo(() => {
+    if (!tokens.length) return [];
 
-  return artists
-    .filter((a) => {
-      const text = `${a.name}`.toLowerCase();
-      return tokens.every((t) => text.includes(t));
-    })
-    .slice(0, 10);
-}, [artists, tokens]);
+    return artists
+      .filter((a) => {
+        const text = `${a.name}`.toLowerCase();
+        return tokens.every((t) => text.includes(t));
+      })
+      .slice(0, 10);
+  }, [artists, tokens]);
 
   const filteredDesigns = useMemo(() => {
-  if (!tokens.length) return [];
+    if (!tokens.length) return [];
 
-  return designs
-    .filter((d) => {
-      const text = `${d.artists?.name || ""} ${d.year || ""} ${d.title || ""}`.toLowerCase();
-      return tokens.every((t) => text.includes(t));
-    })
-    .slice(0, 20);
-}, [designs, tokens]);
+    return designs
+      .filter((d) => {
+        // Remove year from search text; allow matching by title + artist only.
+        // (We keep circa/year out on purpose now.)
+        const text = `${d.artists?.name || ""} ${d.title || ""}`.toLowerCase();
+        return tokens.every((t) => text.includes(t));
+      })
+      .slice(0, 20);
+  }, [designs, tokens]);
 
   return (
     <main>
       <h1>Search</h1>
 
       <input
-        placeholder="Search artists, designs, years…"
+        placeholder="Search artists, designs…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         style={{
@@ -99,7 +104,7 @@ const filteredArtists = useMemo(() => {
               {filteredDesigns.map((d) => (
                 <li key={d.id}>
                   <a href={`/designs/${d.id}`} style={{ color: "inherit" }}>
-                    <strong>{d.artists?.name}</strong> — {d.year} – {d.title}
+                    <strong>{d.artists?.name}</strong> — {d.title}
                   </a>
                 </li>
               ))}
