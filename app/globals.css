@@ -540,3 +540,35 @@ button {
   margin: 0;
   white-space: nowrap;
 }
+
+.upload-row {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  max-width: 640px;
+}
+
+.upload-row input[type="text"] {
+  grid-column: 1 / -1;
+}
+
+.upload-row input[type="file"] {
+  width: 100%;
+}
+
+.upload-row button {
+  white-space: nowrap;
+}
+
+/* Extra small phones */
+@media (max-width: 420px) {
+  .upload-row {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-row button {
+    width: 100%;
+  }
+}
