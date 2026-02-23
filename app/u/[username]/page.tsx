@@ -30,9 +30,9 @@ export default function PublicProfilePage({
   const [items, setItems] = useState<any[]>([]);
   const [view, setView] = useState<"list" | "grid">("grid");
 
-  const [ownershipPhotoMap, setOwnershipPhotoMap] = useState<
-    Record<string, string>
-  >({});
+  const [ownershipPhotoMap, setOwnershipPhotoMap] = useState<Record<string, string>>(
+    {}
+  );
   const [variantPhotoMap, setVariantPhotoMap] = useState<Record<string, string>>(
     {}
   );
@@ -49,6 +49,14 @@ export default function PublicProfilePage({
     const d = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
     const a = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
     return { v, d, a };
+  }
+
+  function designHref(designId?: string | null) {
+    return designId ? `/designs/${designId}` : "#";
+  }
+
+  function artistHref(slug?: string | null) {
+    return slug ? `/artists/${slug}` : "/artists";
   }
 
   useEffect(() => {
@@ -336,8 +344,16 @@ export default function PublicProfilePage({
               const variantImg = v?.id ? variantPhotoMap[v.id] : undefined;
               const img = ownershipImg || variantImg || d?.primary_photo_url;
 
+              const href = designHref(d?.id);
+
               return (
-                <div key={row.id} className="collection-tile">
+                <a
+                  key={row.id}
+                  href={href}
+                  className="collection-tile"
+                  style={{ display: "block", cursor: href === "#" ? "default" : "pointer" }}
+                  title={d?.title ? `View: ${d.title}` : "View design"}
+                >
                   {img ? (
                     <img src={img} alt={d?.title || "Design"} />
                   ) : (
@@ -363,7 +379,7 @@ export default function PublicProfilePage({
                       {v?.base_color} {v?.garment_type}
                     </div>
                   </div>
-                </div>
+                </a>
               );
             })}
           </div>
@@ -372,10 +388,18 @@ export default function PublicProfilePage({
             {items.map((row) => {
               const { v, d, a } = unwrapVariant(row);
 
+              const aHref = artistHref(a?.slug);
+              const dHref = designHref(d?.id);
+
               return (
                 <li key={row.id} style={{ marginBottom: 12 }}>
-                  <strong>{a?.name || "Unknown artist"}</strong> — {d?.year} –{" "}
-                  {d?.title}
+                  <a href={aHref} style={{ color: "inherit" }}>
+                    <strong>{a?.name || "Unknown artist"}</strong>
+                  </a>{" "}
+                  —{" "}
+                  <a href={dHref} style={{ color: "inherit" }}>
+                    {d?.year} – {d?.title}
+                  </a>
                   <br />
                   {v?.base_color} {v?.garment_type} — {v?.manufacturer}
                   <br />

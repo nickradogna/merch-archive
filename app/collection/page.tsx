@@ -9,9 +9,7 @@ export default function CollectionPage() {
   const [ownershipPhotos, setOwnershipPhotos] = useState<Record<string, any[]>>(
     {}
   );
-  const [sortMode, setSortMode] = useState<"recent" | "artist" | "year">(
-    "recent"
-  );
+  const [sortMode, setSortMode] = useState<"recent" | "artist" | "year">("recent");
   const [query, setQuery] = useState("");
   const [onlyWithPhotos, setOnlyWithPhotos] = useState(false);
   const [groupByArtist, setGroupByArtist] = useState(false);
@@ -30,8 +28,7 @@ export default function CollectionPage() {
 
       const { data, error } = await supabase
         .from("ownership")
-        .select(
-          `
+        .select(`
           id,
           size,
           memory,
@@ -48,12 +45,12 @@ export default function CollectionPage() {
               year,
               artists:artist_id (
                 id,
-                name
+                name,
+                slug
               )
             )
           )
-        `
-        )
+        `)
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
@@ -62,37 +59,31 @@ export default function CollectionPage() {
         return;
       }
 
-      const rows = data || [];
-      setItems(rows);
-      await refreshOwnershipPhotos(rows);
+      setItems(data || []);
+
+      const ownershipIds = (data || []).map((r: any) => r.id);
+
+      if (ownershipIds.length) {
+        const { data: photoRows } = await supabase
+          .from("ownership_photos")
+          .select("*")
+          .in("ownership_id", ownershipIds)
+          .order("created_at", { ascending: true });
+
+        const grouped: Record<string, any[]> = {};
+        (photoRows || []).forEach((p: any) => {
+          grouped[p.ownership_id] = grouped[p.ownership_id] || [];
+          grouped[p.ownership_id].push(p);
+        });
+
+        setOwnershipPhotos(grouped);
+      } else {
+        setOwnershipPhotos({});
+      }
     }
 
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function refreshOwnershipPhotos(rows: any[]) {
-    const ownershipIds = (rows || []).map((r: any) => r.id);
-
-    if (!ownershipIds.length) {
-      setOwnershipPhotos({});
-      return;
-    }
-
-    const { data: photoRows } = await supabase
-      .from("ownership_photos")
-      .select("*")
-      .in("ownership_id", ownershipIds)
-      .order("created_at", { ascending: true });
-
-    const grouped: Record<string, any[]> = {};
-    (photoRows || []).forEach((p: any) => {
-      grouped[p.ownership_id] = grouped[p.ownership_id] || [];
-      grouped[p.ownership_id].push(p);
-    });
-
-    setOwnershipPhotos(grouped);
-  }
 
   async function uploadOwnershipPhoto(
     ownershipId: string,
@@ -141,116 +132,6 @@ export default function CollectionPage() {
     });
 
     setMessage("Photo uploaded.");
-  }
-
-  async function deleteOwnershipItem(row: any) {
-    setMessage(null);
-
-    const ok = window.confirm(
-      `Delete this item from your collection?\n\n${row?.variants?.designs?.artists?.name || ""} — ${
-        row?.variants?.designs?.year || ""
-      } – ${row?.variants?.designs?.title || ""}\n\nThis cannot be undone.`
-    );
-    if (!ok) return;
-
-    const { error } = await supabase.from("ownership").delete().eq("id", row.id);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    const next = items.filter((r: any) => r.id !== row.id);
-    setItems(next);
-
-    setOwnershipPhotos((prev) => {
-      const copy = { ...prev };
-      delete copy[row.id];
-      return copy;
-    });
-
-    setMessage("Deleted.");
-  }
-
-  async function deleteOwnershipPhoto(photoId: string, ownershipId: string) {
-    setMessage(null);
-
-    const ok = window.confirm("Delete this photo? This cannot be undone.");
-    if (!ok) return;
-
-    const { error } = await supabase
-      .from("ownership_photos")
-      .delete()
-      .eq("id", photoId);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setOwnershipPhotos((prev) => {
-      const next = { ...prev };
-      const arr = (next[ownershipId] || []).filter((p: any) => p.id !== photoId);
-      next[ownershipId] = arr;
-      return next;
-    });
-
-    setMessage("Photo deleted.");
-  }
-
-  async function editOwnershipItem(row: any) {
-    setMessage(null);
-
-    const currentSize = row.size || "";
-    const currentMemory = row.memory || "";
-    const currentSetlist = row.setlist_url || "";
-
-    const size = window.prompt("Size (required):", currentSize)?.trim() || "";
-    if (!size) {
-      setMessage("Size is required.");
-      return;
-    }
-
-    const memory = window.prompt("Memory / story (optional):", currentMemory);
-    const rawSetlist = window.prompt("Setlist.fm link (optional):", currentSetlist);
-
-    const setlistUrl = (rawSetlist || "").trim();
-
-    if (setlistUrl && !/^https?:\/\/(www\.)?setlist\.fm\//i.test(setlistUrl)) {
-      setMessage(
-        "Please enter a valid Setlist.fm link (it should start with setlist.fm)."
-      );
-      return;
-    }
-
-    const { error } = await supabase
-      .from("ownership")
-      .update({
-        size,
-        memory: (memory || "").trim() || null,
-        setlist_url: setlistUrl || null,
-      })
-      .eq("id", row.id);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setItems((prev) =>
-      prev.map((r: any) =>
-        r.id === row.id
-          ? {
-              ...r,
-              size,
-              memory: (memory || "").trim() || null,
-              setlist_url: setlistUrl || null,
-            }
-          : r
-      )
-    );
-
-    setMessage("Updated.");
   }
 
   // -------- CSV Export helpers --------
@@ -320,9 +201,10 @@ export default function CollectionPage() {
       ].map(csvEscape);
     });
 
-    const csv = [header.map(csvEscape).join(","), ...rows.map((r) => r.join(","))].join(
-      "\n"
-    );
+    const csv = [
+      header.map(csvEscape).join(","),
+      ...rows.map((r) => r.join(",")),
+    ].join("\n");
 
     const safeDate = new Date().toISOString().slice(0, 10);
     downloadTextFile(`merch-archive-collection-${safeDate}.csv`, csv);
@@ -346,10 +228,13 @@ export default function CollectionPage() {
 
   const visibleItems = sortedItems
     .filter((row) => {
-      const text = `${row.variants.designs.artists.name} ${row.variants.designs.title} ${row.variants.base_color} ${row.variants.manufacturer}`.toLowerCase();
+      const text =
+        `${row.variants.designs.artists.name} ${row.variants.designs.title} ${row.variants.base_color} ${row.variants.manufacturer}`.toLowerCase();
       return text.includes(query.toLowerCase());
     })
-    .filter((row) => (onlyWithPhotos ? (ownershipPhotos[row.id] || []).length > 0 : true));
+    .filter((row) =>
+      onlyWithPhotos ? (ownershipPhotos[row.id] || []).length > 0 : true
+    );
 
   const groupedByArtist = Array.from(
     visibleItems.reduce((map: Map<string, any[]>, row: any) => {
@@ -362,116 +247,12 @@ export default function CollectionPage() {
 
   const totalOwned = items.length;
 
-  const withPhotos = items.filter((row) => (ownershipPhotos[row.id] || []).length > 0).length;
+  const withPhotos = items.filter(
+    (row) => (ownershipPhotos[row.id] || []).length > 0
+  ).length;
 
-  const uniqueArtists = new Set(items.map((row) => row.variants.designs.artists.name)).size;
-
-  function ItemActions({ row }: { row: any }) {
-    return (
-      <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={() => editOwnershipItem(row)}>Edit</button>
-        <button onClick={() => deleteOwnershipItem(row)} style={{ borderColor: "#e3b0b0" }}>
-          Delete item
-        </button>
-      </div>
-    );
-  }
-
-  function PhotoGrid({ row }: { row: any }) {
-    const photos = ownershipPhotos[row.id] || [];
-    if (!photos.length) return null;
-
-    return (
-      <div
-        style={{
-          marginTop: 10,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-          gap: 10,
-        }}
-      >
-        {photos.map((p: any) => (
-          <figure key={p.id} style={{ margin: 0 }}>
-            <img
-              src={p.url}
-              alt={p.label || "Ownership photo"}
-              style={{
-                width: "100%",
-                aspectRatio: "1 / 1",
-                objectFit: "cover",
-                borderRadius: 8,
-                border: "1px solid #e0e0e0",
-                background: "#f2f2f2",
-              }}
-            />
-            {p.label && (
-              <figcaption style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                {p.label}
-              </figcaption>
-            )}
-            <div style={{ marginTop: 6 }}>
-              <button
-                onClick={() => deleteOwnershipPhoto(p.id, row.id)}
-                style={{ fontSize: 13 }}
-              >
-                Delete photo
-              </button>
-            </div>
-          </figure>
-        ))}
-      </div>
-    );
-  }
-
-  function UploadRow({ row }: { row: any }) {
-    return (
-      <div className="upload-row">
-        <input
-          type="text"
-          placeholder="Label (front, back, tag)…"
-          data-label
-          style={{
-            flex: 1,
-            padding: "8px 10px",
-            borderRadius: 10,
-            border: "1px solid #ddd",
-          }}
-        />
-
-        <input type="file" accept="image/*" data-file />
-
-        <button
-          className="button-primary"
-          onClick={(e) => {
-            const wrap = (e.currentTarget.parentElement as HTMLElement) || null;
-            if (!wrap) return;
-
-            const labelInput = wrap.querySelector("input[data-label]") as
-              | HTMLInputElement
-              | null;
-            const fileInput = wrap.querySelector("input[data-file]") as
-              | HTMLInputElement
-              | null;
-
-            const label = labelInput?.value || "";
-            const file = fileInput?.files?.[0];
-
-            if (!file) {
-              setMessage("Please choose an image file.");
-              return;
-            }
-
-            uploadOwnershipPhoto(row.id, file, label);
-
-            if (labelInput) labelInput.value = "";
-            if (fileInput) fileInput.value = "";
-          }}
-        >
-          Upload photo
-        </button>
-      </div>
-    );
-  }
+  const uniqueArtists = new Set(items.map((row) => row.variants.designs.artists.name))
+    .size;
 
   return (
     <main style={{ padding: "2rem" }}>
@@ -554,38 +335,140 @@ export default function CollectionPage() {
 
       {!groupByArtist ? (
         <ul>
-          {visibleItems.map((row) => (
-            <li key={row.id} style={{ marginBottom: 12 }}>
-              <strong>{row.variants.designs.artists.name}</strong> —{" "}
-              {row.variants.designs.year} – {row.variants.designs.title}
-              <br />
-              {row.variants.base_color} {row.variants.garment_type} —{" "}
-              {row.variants.manufacturer}
-              <br />
-              Size: <strong>{row.size}</strong>
+          {visibleItems.map((row) => {
+            const artist = row?.variants?.designs?.artists;
+            const design = row?.variants?.designs;
 
-              <ItemActions row={row} />
+            const artistHref =
+              artist?.slug ? `/artists/${artist.slug}` : null;
 
-              {row.memory && (
-                <>
-                  <br />
-                  <em>“{row.memory}”</em>
-                </>
-              )}
+            const designHref =
+              design?.id ? `/designs/${design.id}` : null;
 
-              {row.setlist_url && (
-                <>
-                  <br />
-                  <a href={row.setlist_url} target="_blank" rel="noreferrer">
-                    Setlist.fm show
+            return (
+              <li key={row.id} style={{ marginBottom: 12 }}>
+                <strong>
+                  {artistHref ? (
+                    <a href={artistHref} style={{ textDecoration: "underline" }}>
+                      {artist.name}
+                    </a>
+                  ) : (
+                    artist?.name
+                  )}
+                </strong>{" "}
+                —{" "}
+                {designHref ? (
+                  <a href={designHref} style={{ textDecoration: "underline" }}>
+                    {design?.year} – {design?.title}
                   </a>
-                </>
-              )}
+                ) : (
+                  <>
+                    {design?.year} – {design?.title}
+                  </>
+                )}
+                <br />
+                {row.variants.base_color} {row.variants.garment_type} —{" "}
+                {row.variants.manufacturer}
+                <br />
+                Size: <strong>{row.size}</strong>
 
-              <PhotoGrid row={row} />
-              <UploadRow row={row} />
-            </li>
-          ))}
+                {row.memory && (
+                  <>
+                    <br />
+                    <em>“{row.memory}”</em>
+                  </>
+                )}
+
+                {row.setlist_url && (
+                  <>
+                    <br />
+                    <a href={row.setlist_url} target="_blank" rel="noreferrer">
+                      Setlist.fm show
+                    </a>
+                  </>
+                )}
+
+                {(ownershipPhotos[row.id] || []).length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                      gap: 10,
+                    }}
+                  >
+                    {(ownershipPhotos[row.id] || []).map((p: any) => (
+                      <figure key={p.id} style={{ margin: 0 }}>
+                        <img
+                          src={p.url}
+                          alt={p.label || "Ownership photo"}
+                          style={{
+                            width: "100%",
+                            aspectRatio: "1 / 1",
+                            objectFit: "cover",
+                            borderRadius: 8,
+                            border: "1px solid #e0e0e0",
+                            background: "#f2f2f2",
+                          }}
+                        />
+                        {p.label && (
+                          <figcaption style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                            {p.label}
+                          </figcaption>
+                        )}
+                      </figure>
+                    ))}
+                  </div>
+                )}
+
+                <div className="upload-row">
+                  <input
+                    type="text"
+                    placeholder="Label (front, back, tag)…"
+                    data-label
+                    style={{
+                      flex: 1,
+                      padding: "8px 10px",
+                      borderRadius: 10,
+                      border: "1px solid #ddd",
+                    }}
+                  />
+
+                  <input type="file" accept="image/*" data-file />
+
+                  <button
+                    className="button-primary"
+                    onClick={(e) => {
+                      const wrap = (e.currentTarget.parentElement as HTMLElement) || null;
+                      if (!wrap) return;
+
+                      const labelInput = wrap.querySelector(
+                        "input[data-label]"
+                      ) as HTMLInputElement | null;
+                      const fileInput = wrap.querySelector(
+                        "input[data-file]"
+                      ) as HTMLInputElement | null;
+
+                      const label = labelInput?.value || "";
+                      const file = fileInput?.files?.[0];
+
+                      if (!file) {
+                        setMessage("Please choose an image file.");
+                        return;
+                      }
+
+                      uploadOwnershipPhoto(row.id, file, label);
+
+                      if (labelInput) labelInput.value = "";
+                      if (fileInput) fileInput.value = "";
+                    }}
+                  >
+                    Upload photo
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <div>
@@ -593,37 +476,133 @@ export default function CollectionPage() {
             <section key={artistName} style={{ marginBottom: 22 }}>
               <h2 style={{ marginTop: 18, marginBottom: 10 }}>{artistName}</h2>
               <ul>
-                {rows.map((row) => (
-                  <li key={row.id} style={{ marginBottom: 12 }}>
-                    {row.variants.designs.year} – {row.variants.designs.title}
-                    <br />
-                    {row.variants.base_color} {row.variants.garment_type} —{" "}
-                    {row.variants.manufacturer}
-                    <br />
-                    Size: <strong>{row.size}</strong>
+                {rows.map((row) => {
+                  const artist = row?.variants?.designs?.artists;
+                  const design = row?.variants?.designs;
 
-                    <ItemActions row={row} />
+                  const artistHref =
+                    artist?.slug ? `/artists/${artist.slug}` : null;
 
-                    {row.memory && (
-                      <>
-                        <br />
-                        <em>“{row.memory}”</em>
-                      </>
-                    )}
+                  const designHref =
+                    design?.id ? `/designs/${design.id}` : null;
 
-                    {row.setlist_url && (
-                      <>
-                        <br />
-                        <a href={row.setlist_url} target="_blank" rel="noreferrer">
-                          Setlist.fm show
+                  return (
+                    <li key={row.id} style={{ marginBottom: 12 }}>
+                      {designHref ? (
+                        <a href={designHref} style={{ textDecoration: "underline" }}>
+                          {design?.year} – {design?.title}
                         </a>
-                      </>
-                    )}
+                      ) : (
+                        <>
+                          {design?.year} – {design?.title}
+                        </>
+                      )}
+                      <br />
+                      {row.variants.base_color} {row.variants.garment_type} —{" "}
+                      {row.variants.manufacturer}
+                      <br />
+                      Size: <strong>{row.size}</strong>
 
-                    <PhotoGrid row={row} />
-                    <UploadRow row={row} />
-                  </li>
-                ))}
+                      {row.memory && (
+                        <>
+                          <br />
+                          <em>“{row.memory}”</em>
+                        </>
+                      )}
+
+                      {row.setlist_url && (
+                        <>
+                          <br />
+                          <a href={row.setlist_url} target="_blank" rel="noreferrer">
+                            Setlist.fm show
+                          </a>
+                        </>
+                      )}
+
+                      {(ownershipPhotos[row.id] || []).length > 0 && (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                            gap: 10,
+                          }}
+                        >
+                          {(ownershipPhotos[row.id] || []).map((p: any) => (
+                            <figure key={p.id} style={{ margin: 0 }}>
+                              <img
+                                src={p.url}
+                                alt={p.label || "Ownership photo"}
+                                style={{
+                                  width: "100%",
+                                  aspectRatio: "1 / 1",
+                                  objectFit: "cover",
+                                  borderRadius: 8,
+                                  border: "1px solid #e0e0e0",
+                                  background: "#f2f2f2",
+                                }}
+                              />
+                              {p.label && (
+                                <figcaption
+                                  style={{ fontSize: 12, color: "#666", marginTop: 4 }}
+                                >
+                                  {p.label}
+                                </figcaption>
+                              )}
+                            </figure>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="upload-row">
+                        <input
+                          type="text"
+                          placeholder="Label (front, back, tag)…"
+                          data-label
+                          style={{
+                            flex: 1,
+                            padding: "8px 10px",
+                            borderRadius: 10,
+                            border: "1px solid #ddd",
+                          }}
+                        />
+
+                        <input type="file" accept="image/*" data-file />
+
+                        <button
+                          className="button-primary"
+                          onClick={(e) => {
+                            const wrap =
+                              (e.currentTarget.parentElement as HTMLElement) || null;
+                            if (!wrap) return;
+
+                            const labelInput = wrap.querySelector(
+                              "input[data-label]"
+                            ) as HTMLInputElement | null;
+                            const fileInput = wrap.querySelector(
+                              "input[data-file]"
+                            ) as HTMLInputElement | null;
+
+                            const label = labelInput?.value || "";
+                            const file = fileInput?.files?.[0];
+
+                            if (!file) {
+                              setMessage("Please choose an image file.");
+                              return;
+                            }
+
+                            uploadOwnershipPhoto(row.id, file, label);
+
+                            if (labelInput) labelInput.value = "";
+                            if (fileInput) fileInput.value = "";
+                          }}
+                        >
+                          Upload photo
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           ))}

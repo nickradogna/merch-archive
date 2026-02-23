@@ -15,12 +15,16 @@ export default function DesignPage({
   const [message, setMessage] = useState<string | null>(null);
 
   const [variantPhotos, setVariantPhotos] = useState<Record<string, any[]>>({});
+  const [ownedCountMap, setOwnedCountMap] = useState<Record<string, number>>({});
+
   const [colorFilter, setColorFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [manufacturerFilter, setManufacturerFilter] = useState("");
 
   useEffect(() => {
     async function load() {
+      setMessage(null);
+
       const { data: designData } = await supabase
         .from("designs")
         .select("*")
@@ -35,8 +39,29 @@ export default function DesignPage({
       setDesign(designData);
       setVariants(variantsData || []);
 
-      const variantIds = (variantsData || []).map((v: any) => v.id);
+      const variantIds = (variantsData || []).map((v: any) => v.id).filter(Boolean);
 
+      // --- owned counts per variant (RPC) ---
+      if (variantIds.length) {
+        const { data: countsData, error: countsErr } = await supabase.rpc(
+          "variant_owned_counts",
+          { variant_ids: variantIds }
+        );
+
+        if (!countsErr && countsData) {
+          const map: Record<string, number> = {};
+          (countsData as any[]).forEach((r) => {
+            if (r?.variant_id) map[String(r.variant_id)] = Number(r.owned_count || 0);
+          });
+          setOwnedCountMap(map);
+        } else {
+          setOwnedCountMap({});
+        }
+      } else {
+        setOwnedCountMap({});
+      }
+
+      // --- variant photos ---
       if (variantIds.length) {
         const { data: photoRows } = await supabase
           .from("variant_photos")
@@ -121,7 +146,18 @@ export default function DesignPage({
       setlist_url: setlistUrl?.trim() || null,
     });
 
-    setMessage(error ? error.message : "Added to your collection.");
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    // Optimistically bump the owned count for this variant
+    setOwnedCountMap((prev) => ({
+      ...prev,
+      [variantId]: (prev[variantId] || 0) + 1,
+    }));
+
+    setMessage("Added to your collection.");
   }
 
   async function markWanted(variantId: string) {
@@ -307,147 +343,156 @@ export default function DesignPage({
       </div>
 
       <ul style={{ paddingLeft: 18 }}>
-        {filteredVariants.map((variant) => (
-          <li key={variant.id} style={{ marginBottom: 16 }}>
-            <div style={{ fontWeight: 600 }}>
-              {variant.base_color} {variant.garment_type} — {variant.manufacturer}
-            </div>
+        {filteredVariants.map((variant) => {
+          const ownedCount = ownedCountMap[variant.id] ?? 0;
 
-            {variant.notes && (
-              <div style={{ marginTop: 6, color: "#666", fontSize: 13 }}>
-                {variant.notes}
+          return (
+            <li key={variant.id} style={{ marginBottom: 16 }}>
+              <div style={{ fontWeight: 600 }}>
+                {variant.base_color} {variant.garment_type} — {variant.manufacturer}
               </div>
-            )}
 
-            {/* Action buttons (stay together on mobile) */}
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                flexWrap: "wrap",
-                alignItems: "center",
-                marginTop: 10,
-              }}
-            >
-              <button
-                className="button-primary"
-                onClick={() => markOwned(variant.id)}
-              >
-                I own this
-              </button>
-              <button onClick={() => markWanted(variant.id)}>I want this</button>
-            </div>
+              <div style={{ marginTop: 6, color: "#666", fontSize: 13 }}>
+                Owned by <strong>{ownedCount}</strong>{" "}
+                {ownedCount === 1 ? "collector" : "collectors"}
+              </div>
 
-            {/* Photo grid */}
-            {(variantPhotos[variant.id] || []).length > 0 && (
+              {variant.notes && (
+                <div style={{ marginTop: 6, color: "#666", fontSize: 13 }}>
+                  {variant.notes}
+                </div>
+              )}
+
+              {/* Action buttons (stay together on mobile) */}
               <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  marginTop: 10,
+                }}
+              >
+                <button
+                  className="button-primary"
+                  onClick={() => markOwned(variant.id)}
+                >
+                  I own this
+                </button>
+                <button onClick={() => markWanted(variant.id)}>I want this</button>
+              </div>
+
+              {/* Photo grid */}
+              {(variantPhotos[variant.id] || []).length > 0 && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                    gap: 10,
+                  }}
+                >
+                  {(variantPhotos[variant.id] || []).map((p: any) => (
+                    <figure key={p.id} style={{ margin: 0 }}>
+                      <img
+                        src={p.url}
+                        alt={p.label || "Variant photo"}
+                        style={{
+                          width: "100%",
+                          aspectRatio: "1 / 1",
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          border: "1px solid #e0e0e0",
+                          background: "#f2f2f2",
+                        }}
+                      />
+                      {p.label && (
+                        <figcaption style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                          {p.label}
+                        </figcaption>
+                      )}
+                    </figure>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload row (responsive, no horizontal scroll) */}
+              <div
+                className="upload-row"
                 style={{
                   marginTop: 12,
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                  gap: 10,
-                }}
-              >
-                {(variantPhotos[variant.id] || []).map((p: any) => (
-                  <figure key={p.id} style={{ margin: 0 }}>
-                    <img
-                      src={p.url}
-                      alt={p.label || "Variant photo"}
-                      style={{
-                        width: "100%",
-                        aspectRatio: "1 / 1",
-                        objectFit: "cover",
-                        borderRadius: 8,
-                        border: "1px solid #e0e0e0",
-                        background: "#f2f2f2",
-                      }}
-                    />
-                    {p.label && (
-                      <figcaption style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                        {p.label}
-                      </figcaption>
-                    )}
-                  </figure>
-                ))}
-              </div>
-            )}
-
-            {/* Upload row (responsive, no horizontal scroll) */}
-            <div
-              className="upload-row"
-              style={{
-                marginTop: 12,
-                display: "grid",
-                gap: 8,
-                gridTemplateColumns: "1fr",
-                maxWidth: 640,
-              }}
-            >
-              <input
-                type="text"
-                placeholder="Label (front, back, tag)…"
-                data-label
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #ddd",
-                }}
-              />
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
                   gap: 8,
-                  alignItems: "center",
+                  gridTemplateColumns: "1fr",
+                  maxWidth: 640,
                 }}
               >
-                {/* Keep native file picker, but constrain layout */}
                 <input
-                  type="file"
-                  accept="image/*"
-                  data-file
+                  type="text"
+                  placeholder="Label (front, back, tag)…"
+                  data-label
                   style={{
                     width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: "1px solid #ddd",
                   }}
                 />
 
-                <button
-                  className="button-primary"
-                  onClick={(e) => {
-                    const wrap = (e.currentTarget.parentElement
-                      ?.parentElement as HTMLElement) || null;
-                    if (!wrap) return;
-
-                    const labelInput = wrap.querySelector(
-                      "input[data-label]"
-                    ) as HTMLInputElement | null;
-
-                    const fileInput = wrap.querySelector(
-                      "input[data-file]"
-                    ) as HTMLInputElement | null;
-
-                    const label = labelInput?.value || "";
-                    const file = fileInput?.files?.[0];
-
-                    if (!file) {
-                      setMessage("Please choose an image file.");
-                      return;
-                    }
-
-                    uploadVariantPhoto(variant.id, file, label);
-
-                    if (labelInput) labelInput.value = "";
-                    if (fileInput) fileInput.value = "";
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    gap: 8,
+                    alignItems: "center",
                   }}
                 >
-                  Upload photo
-                </button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    data-file
+                    style={{
+                      width: "100%",
+                    }}
+                  />
+
+                  <button
+                    className="button-primary"
+                    onClick={(e) => {
+                      const wrap =
+                        (e.currentTarget.parentElement?.parentElement as HTMLElement) ||
+                        null;
+                      if (!wrap) return;
+
+                      const labelInput = wrap.querySelector(
+                        "input[data-label]"
+                      ) as HTMLInputElement | null;
+
+                      const fileInput = wrap.querySelector(
+                        "input[data-file]"
+                      ) as HTMLInputElement | null;
+
+                      const label = labelInput?.value || "";
+                      const file = fileInput?.files?.[0];
+
+                      if (!file) {
+                        setMessage("Please choose an image file.");
+                        return;
+                      }
+
+                      uploadVariantPhoto(variant.id, file, label);
+
+                      if (labelInput) labelInput.value = "";
+                      if (fileInput) fileInput.value = "";
+                    }}
+                  >
+                    Upload photo
+                  </button>
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
       {message && <p style={{ marginTop: 14 }}>{message}</p>}
