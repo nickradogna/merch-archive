@@ -31,6 +31,7 @@ export default function CollectionPage() {
         .select(`
           id,
           size,
+          year_obtained,
           memory,
           setlist_url,
           created_at,
@@ -43,6 +44,7 @@ export default function CollectionPage() {
               id,
               title,
               year,
+              circa,
               artists:artist_id (
                 id,
                 name,
@@ -110,13 +112,11 @@ export default function CollectionPage() {
 
     const url = publicUrlData.publicUrl;
 
-    const { error: insertError } = await supabase
-      .from("ownership_photos")
-      .insert({
-        ownership_id: ownershipId,
-        url,
-        label: label?.trim() || null,
-      });
+    const { error: insertError } = await supabase.from("ownership_photos").insert({
+      ownership_id: ownershipId,
+      url,
+      label: label?.trim() || null,
+    });
 
     if (insertError) {
       setMessage(insertError.message);
@@ -165,11 +165,12 @@ export default function CollectionPage() {
     const header = [
       "Artist",
       "Design",
-      "Year",
+      "Design Circa",
       "Variant Color",
       "Garment Type",
       "Manufacturer",
       "Size",
+      "Year Obtained",
       "Memory",
       "Setlist URL",
       "Added At",
@@ -178,11 +179,15 @@ export default function CollectionPage() {
     const rows = items.map((row: any) => {
       const artist = row?.variants?.designs?.artists?.name ?? "";
       const title = row?.variants?.designs?.title ?? "";
-      const year = row?.variants?.designs?.year ?? "";
+      const designCirca =
+        row?.variants?.designs?.circa ??
+        row?.variants?.designs?.year ??
+        "";
       const color = row?.variants?.base_color ?? "";
       const garment = row?.variants?.garment_type ?? "";
       const manufacturer = row?.variants?.manufacturer ?? "";
       const size = row?.size ?? "";
+      const yearObtained = row?.year_obtained ?? "";
       const memory = row?.memory ?? "";
       const setlist = row?.setlist_url ?? "";
       const addedAt = row?.created_at ?? "";
@@ -190,11 +195,12 @@ export default function CollectionPage() {
       return [
         artist,
         title,
-        year,
+        designCirca,
         color,
         garment,
         manufacturer,
         size,
+        yearObtained,
         memory,
         setlist,
         addedAt,
@@ -222,14 +228,17 @@ export default function CollectionPage() {
       return an.localeCompare(bn);
     }
 
-    // year: new -> old
-    return (b.variants.designs.year || 0) - (a.variants.designs.year || 0);
+    // year: sort by "circa" then fallback to legacy year (new -> old)
+    const ay = a?.variants?.designs?.circa ?? a?.variants?.designs?.year ?? 0;
+    const by = b?.variants?.designs?.circa ?? b?.variants?.designs?.year ?? 0;
+    return (by || 0) - (ay || 0);
   });
 
   const visibleItems = sortedItems
     .filter((row) => {
-      const text =
-        `${row.variants.designs.artists.name} ${row.variants.designs.title} ${row.variants.base_color} ${row.variants.manufacturer}`.toLowerCase();
+      const artistName = row?.variants?.designs?.artists?.name ?? "";
+      const title = row?.variants?.designs?.title ?? "";
+      const text = `${artistName} ${title} ${row?.variants?.base_color ?? ""} ${row?.variants?.manufacturer ?? ""}`.toLowerCase();
       return text.includes(query.toLowerCase());
     })
     .filter((row) =>
@@ -238,7 +247,7 @@ export default function CollectionPage() {
 
   const groupedByArtist = Array.from(
     visibleItems.reduce((map: Map<string, any[]>, row: any) => {
-      const name = row.variants.designs.artists.name as string;
+      const name = row?.variants?.designs?.artists?.name as string;
       if (!map.has(name)) map.set(name, []);
       map.get(name)!.push(row);
       return map;
@@ -251,8 +260,9 @@ export default function CollectionPage() {
     (row) => (ownershipPhotos[row.id] || []).length > 0
   ).length;
 
-  const uniqueArtists = new Set(items.map((row) => row.variants.designs.artists.name))
-    .size;
+  const uniqueArtists = new Set(
+    items.map((row) => row?.variants?.designs?.artists?.name)
+  ).size;
 
   return (
     <main style={{ padding: "2rem" }}>
@@ -292,7 +302,7 @@ export default function CollectionPage() {
           >
             <option value="recent">Recently added</option>
             <option value="artist">Artist (A–Z)</option>
-            <option value="year">Year (new → old)</option>
+            <option value="year">Circa (new → old)</option>
           </select>
         </label>
       </div>
@@ -339,18 +349,20 @@ export default function CollectionPage() {
             const artist = row?.variants?.designs?.artists;
             const design = row?.variants?.designs;
 
-            const artistHref =
-              artist?.slug ? `/artists/${artist.slug}` : null;
+            const artistHref = artist?.slug ? `/artists/${artist.slug}` : null;
+            const designHref = design?.id ? `/designs/${design.id}` : null;
 
-            const designHref =
-              design?.id ? `/designs/${design.id}` : null;
+            const yearObtained =
+              row?.year_obtained !== null && row?.year_obtained !== undefined && String(row.year_obtained).trim() !== ""
+                ? String(row.year_obtained)
+                : null;
 
             return (
               <li key={row.id} style={{ marginBottom: 12 }}>
                 <strong>
                   {artistHref ? (
                     <a href={artistHref} style={{ textDecoration: "underline" }}>
-                      {artist.name}
+                      {artist?.name}
                     </a>
                   ) : (
                     artist?.name
@@ -359,33 +371,39 @@ export default function CollectionPage() {
                 —{" "}
                 {designHref ? (
                   <a href={designHref} style={{ textDecoration: "underline" }}>
-                    {design?.year} – {design?.title}
+                    {design?.title}
                   </a>
                 ) : (
-                  <>
-                    {design?.year} – {design?.title}
-                  </>
+                  <>{design?.title}</>
                 )}
-                <br />
-                {row.variants.base_color} {row.variants.garment_type} —{" "}
-                {row.variants.manufacturer}
-                <br />
-                Size: <strong>{row.size}</strong>
+
+                {yearObtained && (
+                  <div style={{ marginTop: 4, color: "#666", fontSize: 13 }}>
+                    Year obtained: <strong>{yearObtained}</strong>
+                  </div>
+                )}
+
+                <div style={{ marginTop: 6 }}>
+                  {row.variants.base_color} {row.variants.garment_type} —{" "}
+                  {row.variants.manufacturer}
+                </div>
+
+                <div style={{ marginTop: 6 }}>
+                  Size: <strong>{row.size}</strong>
+                </div>
 
                 {row.memory && (
-                  <>
-                    <br />
+                  <div style={{ marginTop: 6 }}>
                     <em>“{row.memory}”</em>
-                  </>
+                  </div>
                 )}
 
                 {row.setlist_url && (
-                  <>
-                    <br />
+                  <div style={{ marginTop: 6 }}>
                     <a href={row.setlist_url} target="_blank" rel="noreferrer">
                       Setlist.fm show
                     </a>
-                  </>
+                  </div>
                 )}
 
                 {(ownershipPhotos[row.id] || []).length > 0 && (
@@ -472,140 +490,159 @@ export default function CollectionPage() {
         </ul>
       ) : (
         <div>
-          {groupedByArtist.map(([artistName, rows]) => (
-            <section key={artistName} style={{ marginBottom: 22 }}>
-              <h2 style={{ marginTop: 18, marginBottom: 10 }}>{artistName}</h2>
-              <ul>
-                {rows.map((row) => {
-                  const artist = row?.variants?.designs?.artists;
-                  const design = row?.variants?.designs;
+          {groupedByArtist.map(([artistName, rows]) => {
+            // Try to preserve your clickable artist page when grouping
+            const anyRow = (rows as any[])[0];
+            const a = anyRow?.variants?.designs?.artists;
+            const artistHref = a?.slug ? `/artists/${a.slug}` : null;
 
-                  const artistHref =
-                    artist?.slug ? `/artists/${artist.slug}` : null;
+            return (
+              <section key={artistName} style={{ marginBottom: 22 }}>
+                <h2 style={{ marginTop: 18, marginBottom: 10 }}>
+                  {artistHref ? (
+                    <a href={artistHref} style={{ textDecoration: "underline" }}>
+                      {artistName}
+                    </a>
+                  ) : (
+                    artistName
+                  )}
+                </h2>
 
-                  const designHref =
-                    design?.id ? `/designs/${design.id}` : null;
+                <ul>
+                  {(rows as any[]).map((row) => {
+                    const design = row?.variants?.designs;
+                    const designHref = design?.id ? `/designs/${design.id}` : null;
 
-                  return (
-                    <li key={row.id} style={{ marginBottom: 12 }}>
-                      {designHref ? (
-                        <a href={designHref} style={{ textDecoration: "underline" }}>
-                          {design?.year} – {design?.title}
-                        </a>
-                      ) : (
-                        <>
-                          {design?.year} – {design?.title}
-                        </>
-                      )}
-                      <br />
-                      {row.variants.base_color} {row.variants.garment_type} —{" "}
-                      {row.variants.manufacturer}
-                      <br />
-                      Size: <strong>{row.size}</strong>
+                    const yearObtained =
+                      row?.year_obtained !== null && row?.year_obtained !== undefined && String(row.year_obtained).trim() !== ""
+                        ? String(row.year_obtained)
+                        : null;
 
-                      {row.memory && (
-                        <>
-                          <br />
-                          <em>“{row.memory}”</em>
-                        </>
-                      )}
-
-                      {row.setlist_url && (
-                        <>
-                          <br />
-                          <a href={row.setlist_url} target="_blank" rel="noreferrer">
-                            Setlist.fm show
+                    return (
+                      <li key={row.id} style={{ marginBottom: 12 }}>
+                        {designHref ? (
+                          <a href={designHref} style={{ textDecoration: "underline" }}>
+                            {design?.title}
                           </a>
-                        </>
-                      )}
+                        ) : (
+                          <>{design?.title}</>
+                        )}
 
-                      {(ownershipPhotos[row.id] || []).length > 0 && (
-                        <div
-                          style={{
-                            marginTop: 10,
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                            gap: 10,
-                          }}
-                        >
-                          {(ownershipPhotos[row.id] || []).map((p: any) => (
-                            <figure key={p.id} style={{ margin: 0 }}>
-                              <img
-                                src={p.url}
-                                alt={p.label || "Ownership photo"}
-                                style={{
-                                  width: "100%",
-                                  aspectRatio: "1 / 1",
-                                  objectFit: "cover",
-                                  borderRadius: 8,
-                                  border: "1px solid #e0e0e0",
-                                  background: "#f2f2f2",
-                                }}
-                              />
-                              {p.label && (
-                                <figcaption
-                                  style={{ fontSize: 12, color: "#666", marginTop: 4 }}
-                                >
-                                  {p.label}
-                                </figcaption>
-                              )}
-                            </figure>
-                          ))}
+                        {yearObtained && (
+                          <div style={{ marginTop: 4, color: "#666", fontSize: 13 }}>
+                            Year obtained: <strong>{yearObtained}</strong>
+                          </div>
+                        )}
+
+                        <div style={{ marginTop: 6 }}>
+                          {row.variants.base_color} {row.variants.garment_type} —{" "}
+                          {row.variants.manufacturer}
                         </div>
-                      )}
 
-                      <div className="upload-row">
-                        <input
-                          type="text"
-                          placeholder="Label (front, back, tag)…"
-                          data-label
-                          style={{
-                            flex: 1,
-                            padding: "8px 10px",
-                            borderRadius: 10,
-                            border: "1px solid #ddd",
-                          }}
-                        />
+                        <div style={{ marginTop: 6 }}>
+                          Size: <strong>{row.size}</strong>
+                        </div>
 
-                        <input type="file" accept="image/*" data-file />
+                        {row.memory && (
+                          <div style={{ marginTop: 6 }}>
+                            <em>“{row.memory}”</em>
+                          </div>
+                        )}
 
-                        <button
-                          className="button-primary"
-                          onClick={(e) => {
-                            const wrap =
-                              (e.currentTarget.parentElement as HTMLElement) || null;
-                            if (!wrap) return;
+                        {row.setlist_url && (
+                          <div style={{ marginTop: 6 }}>
+                            <a href={row.setlist_url} target="_blank" rel="noreferrer">
+                              Setlist.fm show
+                            </a>
+                          </div>
+                        )}
 
-                            const labelInput = wrap.querySelector(
-                              "input[data-label]"
-                            ) as HTMLInputElement | null;
-                            const fileInput = wrap.querySelector(
-                              "input[data-file]"
-                            ) as HTMLInputElement | null;
+                        {(ownershipPhotos[row.id] || []).length > 0 && (
+                          <div
+                            style={{
+                              marginTop: 10,
+                              display: "grid",
+                              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                              gap: 10,
+                            }}
+                          >
+                            {(ownershipPhotos[row.id] || []).map((p: any) => (
+                              <figure key={p.id} style={{ margin: 0 }}>
+                                <img
+                                  src={p.url}
+                                  alt={p.label || "Ownership photo"}
+                                  style={{
+                                    width: "100%",
+                                    aspectRatio: "1 / 1",
+                                    objectFit: "cover",
+                                    borderRadius: 8,
+                                    border: "1px solid #e0e0e0",
+                                    background: "#f2f2f2",
+                                  }}
+                                />
+                                {p.label && (
+                                  <figcaption style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                                    {p.label}
+                                  </figcaption>
+                                )}
+                              </figure>
+                            ))}
+                          </div>
+                        )}
 
-                            const label = labelInput?.value || "";
-                            const file = fileInput?.files?.[0];
+                        <div className="upload-row">
+                          <input
+                            type="text"
+                            placeholder="Label (front, back, tag)…"
+                            data-label
+                            style={{
+                              flex: 1,
+                              padding: "8px 10px",
+                              borderRadius: 10,
+                              border: "1px solid #ddd",
+                            }}
+                          />
 
-                            if (!file) {
-                              setMessage("Please choose an image file.");
-                              return;
-                            }
+                          <input type="file" accept="image/*" data-file />
 
-                            uploadOwnershipPhoto(row.id, file, label);
+                          <button
+                            className="button-primary"
+                            onClick={(e) => {
+                              const wrap =
+                                (e.currentTarget.parentElement as HTMLElement) || null;
+                              if (!wrap) return;
 
-                            if (labelInput) labelInput.value = "";
-                            if (fileInput) fileInput.value = "";
-                          }}
-                        >
-                          Upload photo
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
+                              const labelInput = wrap.querySelector(
+                                "input[data-label]"
+                              ) as HTMLInputElement | null;
+                              const fileInput = wrap.querySelector(
+                                "input[data-file]"
+                              ) as HTMLInputElement | null;
+
+                              const label = labelInput?.value || "";
+                              const file = fileInput?.files?.[0];
+
+                              if (!file) {
+                                setMessage("Please choose an image file.");
+                                return;
+                              }
+
+                              uploadOwnershipPhoto(row.id, file, label);
+
+                              if (labelInput) labelInput.value = "";
+                              if (fileInput) fileInput.value = "";
+                            }}
+                          >
+                            Upload photo
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })}
         </div>
       )}
     </main>

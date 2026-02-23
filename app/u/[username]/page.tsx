@@ -109,15 +109,16 @@ export default function PublicProfilePage({
       }
 
       // load ownership items (keep it small + useful)
+      // NOTE: year_obtained added; design.year kept for legacy fallback elsewhere if you want it.
       const { data: ownedRows, error: ownedErr } = await supabase
         .from("ownership")
         .select(
           `
-          id, size, memory, created_at,
+          id, size, memory, created_at, year_obtained,
           variants (
             id, base_color, garment_type, manufacturer,
             designs (
-              id, year, title, primary_photo_url,
+              id, title, year, primary_photo_url,
               artists ( id, name, slug )
             )
           )
@@ -345,14 +346,20 @@ export default function PublicProfilePage({
               const img = ownershipImg || variantImg || d?.primary_photo_url;
 
               const href = designHref(d?.id);
+              const title = d?.title ? `View: ${d.title}` : "View design";
 
               return (
                 <a
                   key={row.id}
                   href={href}
                   className="collection-tile"
-                  style={{ display: "block", cursor: href === "#" ? "default" : "pointer" }}
-                  title={d?.title ? `View: ${d.title}` : "View design"}
+                  style={{
+                    display: "block",
+                    cursor: href === "#" ? "default" : "pointer",
+                    textDecoration: "none",
+                    color: "inherit",
+                  }}
+                  title={title}
                 >
                   {img ? (
                     <img src={img} alt={d?.title || "Design"} />
@@ -372,12 +379,15 @@ export default function PublicProfilePage({
 
                   <div className="collection-overlay">
                     <strong>{a?.name || "Unknown artist"}</strong>
-                    <div>
-                      {d?.year} – {d?.title}
-                    </div>
+                    <div>{d?.title || "Untitled"}</div>
                     <div>
                       {v?.base_color} {v?.garment_type}
                     </div>
+                    {row?.year_obtained ? (
+                      <div style={{ marginTop: 4, opacity: 0.9 }}>
+                        Obtained: {row.year_obtained}
+                      </div>
+                    ) : null}
                   </div>
                 </a>
               );
@@ -393,13 +403,16 @@ export default function PublicProfilePage({
 
               return (
                 <li key={row.id} style={{ marginBottom: 12 }}>
-                  <a href={aHref} style={{ color: "inherit" }}>
+                  <a href={aHref} style={{ color: "inherit", textDecoration: "underline" }}>
                     <strong>{a?.name || "Unknown artist"}</strong>
                   </a>{" "}
                   —{" "}
-                  <a href={dHref} style={{ color: "inherit" }}>
-                    {d?.year} – {d?.title}
+                  <a href={dHref} style={{ color: "inherit", textDecoration: "underline" }}>
+                    {d?.title || "Untitled"}
                   </a>
+                  {row?.year_obtained ? (
+                    <span style={{ color: "#666" }}>{" "}• Obtained: {row.year_obtained}</span>
+                  ) : null}
                   <br />
                   {v?.base_color} {v?.garment_type} — {v?.manufacturer}
                   <br />
