@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
+/* =========================
+   Theme + Base
+   ========================= */
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  --page-padding: 24px;
 }
 
 @theme inline {
@@ -23,41 +29,47 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
-.design-card {
-  text-decoration: none;
-  color: inherit;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 12px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-  display: block;
+/* Responsive page padding */
+@media (max-width: 640px) {
+  :root {
+    --page-padding: 16px;
+  }
+
+  h1 {
+    font-size: 34px;
+    line-height: 1.1;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
 }
 
-.design-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
+/* Make taps feel snappy on mobile */
+a,
 button {
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-  background: #fff;
-  cursor: pointer;
-  font-size: 14px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-button:hover {
-  background: #f4f4f4;
+/* =========================
+   Links
+   ========================= */
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-button:active {
-  background: #eaeaea;
+a:hover {
+  text-decoration: underline;
 }
+
+/* =========================
+   Buttons
+   ========================= */
 
 button {
   all: unset;
@@ -79,28 +91,28 @@ button:active {
   background: #eaeaea;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
 .button-primary {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #111;
   background: #111;
   color: #fff;
-  border: 1px solid #111;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
 }
 
 .button-primary:hover {
-  background: #333;
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
 }
 
-.button-primary:active {
-  background: #000;
-}
+/* =========================
+   Form controls
+   ========================= */
 
 input,
 textarea,
@@ -139,23 +151,43 @@ input[type="radio"] {
   cursor: pointer;
 }
 
-.nav-brand {
-  text-decoration: none;
-  color: #111;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+/* Prevent iOS zoom-on-focus */
+input,
+textarea,
+select,
+button {
+  font-size: 16px;
 }
 
-.nav-link {
+/* =========================
+   Cards (design / artist / stats)
+   ========================= */
+
+.design-card {
   text-decoration: none;
-  color: #555;
-  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+  color: inherit;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  display: block;
 }
 
-.nav-link:hover {
-  color: #111;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.design-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.artist-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.artist-card:hover {
+  transform: translateY(-2px);
+  border-color: #ddd;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 
 .stat-card {
@@ -178,118 +210,6 @@ input[type="radio"] {
   color: #666;
 }
 
-/* Artist card hover polish */
-
-.artist-card {
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-}
-
-.artist-card:hover {
-  transform: translateY(-2px);
-  border-color: #ddd;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
-}
-
-/* Add hub cards */
-.add-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.add-card {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  border: 1px solid #eee;
-  border-radius: 14px;
-  background: #fff;
-  padding: 18px;
-  aspect-ratio: 1 / 1; /* makes them square */
-  transition: transform 120ms ease, box-shadow 120ms ease;
-  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
-}
-
-.add-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-.add-card-title {
-  font-size: 20px;
-  font-weight: 850;
-  margin: 0 0 10px 0;
-}
-
-.add-card-desc {
-  color: #666;
-  line-height: 1.45;
-  margin: 0;
-  max-width: 34ch;
-}
-
-.add-card-arrow {
-  margin-top: auto;
-  color: #777;
-  font-size: 13px;
-}
-
-.add-card-inner {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ---- Mobile-friendly defaults ---- */
-
-:root {
-  --page-padding: 24px;
-}
-
-/* Make taps feel snappy on mobile */
-a, button {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Improve overall readability */
-body {
-  text-rendering: optimizeLegibility;
-}
-
-/* Responsive page padding */
-@media (max-width: 640px) {
-  :root {
-    --page-padding: 16px;
-  }
-
-  h1 {
-    font-size: 34px;
-    line-height: 1.1;
-  }
-
-  h2 {
-    font-size: 20px;
-  }
-}
-
-/* Ensure form controls are finger-friendly */
-input, textarea, select, button {
-  font-size: 16px; /* prevents iOS zoom-on-focus */
-}
-
-/* Better nav wrapping / spacing on small screens */
-@media (max-width: 640px) {
-  .nav {
-    gap: 10px !important;
-  }
-
-  .nav a {
-    padding: 8px 10px;
-    border-radius: 10px;
-  }
-}
-
 /* Touch “press” feedback (no hover needed) */
 .add-card:active,
 .artist-card:active,
@@ -297,197 +217,26 @@ input, textarea, select, button {
   transform: scale(0.99);
 }
 
-/* Make image grids breathe on mobile */
-@media (max-width: 640px) {
-  .add-grid {
-    grid-template-columns: 1fr;
-  }
+/* =========================
+   Nav
+   ========================= */
 
-  /* If you ever want two-up later:
-     grid-template-columns: repeat(2, minmax(0, 1fr)); */
-}
-
-.nav-link:active {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-/* Home page mobile centering */
-@media (max-width: 640px) {
-  .home-page {
-    text-align: center;
-  }
-
-  .home-title-row {
-    justify-content: center;
-  }
-
-  .home-actions {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 640px) {
-  .home-title-row {
-    flex-direction: column;
-    gap: 10px !important;
-  }
-}
-
-/* Collection: photo upload row (mobile-friendly) */
-.upload-row {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.upload-row input[type="text"] {
-  flex: 1 1 240px;
-  min-width: 220px;
-}
-
-.upload-row input[type="file"] {
-  flex: 0 1 220px;
-  min-width: 200px;
-}
-
-/* Make "Choose File" look like a button */
-.upload-row input[type="file"]::file-selector-button {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #ddd;
-  background: #fff;
-  cursor: pointer;
-}
-
-.upload-row input[type="file"]::file-selector-button:hover {
-  background: #f7f7f7;
-}
-
-@media (max-width: 640px) {
-  .upload-row {
-    align-items: stretch;
-  }
-
-  .upload-row input[type="text"],
-  .upload-row input[type="file"],
-  .upload-row button {
-    width: 100%;
-  }
-}
-
-/* Add hub cards */
-.add-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
-  margin-top: 24px;
-}
-
-.add-card {
-  aspect-ratio: 1 / 1;
-  border: 1px solid #eee;
-  border-radius: 18px;
-  background: #fff;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
-  text-align: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.add-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
-}
-
-@media (max-width: 640px) {
-  .add-grid {
-    grid-template-columns: 1fr;
-    justify-items: center;
-  }
-
-  .add-card {
-    width: 100%;
-    max-width: 320px;
-    aspect-ratio: 1 / 1;
-  }
-}
-
-/* Center content inside Add hub cards */
-.add-card-inner {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
-}
-
-/* Add hub: vertically center content inside square cards (desktop + mobile) */
-.add-card {
-  display: block; /* keep it as a link */
-}
-
-.add-card-inner {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* Add hub: center title+desc, keep arrow at bottom */
-.add-card-inner {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Center the title/desc block */
-.add-card-title,
-.add-card-desc {
-  text-align: center;
-}
-
-.add-card-title {
-  margin-top: auto;
-}
-
-.add-card-desc {
-  margin-bottom: auto;
-}
-
-/* Keep the arrow at the bottom */
-.add-card-arrow {
-  text-align: center;
-}
-
-/* Sticky, glassy nav header */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 50;
-
-  /* “glass” layer */
   background: rgba(248, 248, 248, 0.85);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-
-  /* make it feel like a layer */
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
 
-  /* offset your existing layout padding */
   margin-left: calc(var(--page-padding) * -1);
   margin-right: calc(var(--page-padding) * -1);
   padding-left: var(--page-padding);
   padding-right: var(--page-padding);
-
-  /* keep nice spacing */
   padding-top: 14px;
 }
 
-/* tighten header spacing on mobile */
 @media (max-width: 640px) {
   .site-header {
     padding-top: 10px;
@@ -495,59 +244,12 @@ input, textarea, select, button {
   }
 }
 
-/* Keep Add hub arrow inside square cards */
-.add-card {
-  display: flex;
-  flex-direction: column;
-}
-
-.add-card-inner {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Pin arrow near bottom of card */
-.add-card-arrow {
-  margin-top: auto;
-  padding-top: 10px;
-}
-
-/* Nav: brand + active state */
-.nav-brand {
-  font-weight: 900;
-  letter-spacing: -0.02em;
-}
-
-.nav-spacer {
-  flex: 1;
-}
-
-.nav-link {
-  border: 1px solid transparent;
-  background: transparent;
-  transition: background 120ms ease, border-color 120ms ease;
-}
-
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: #e6e6e6;
-}
-
-.nav-active {
-  background: #fff;
-  border-color: #e2e2e2;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-}
-
-/* ===== Nav (clean, non-bubbly active state) ===== */
-
 .nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap; /* allows wrapping on smaller widths */
+  flex-wrap: wrap;
 }
 
 .nav-left,
@@ -558,27 +260,31 @@ input, textarea, select, button {
   flex-wrap: wrap;
 }
 
+.nav-brand {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  color: #111;
+}
+
 .nav-link {
   display: inline-flex;
   align-items: center;
   padding: 8px 10px;
-  border-radius: 10px; /* mild rounding, not pill */
+  border-radius: 10px;
   text-decoration: none;
   color: inherit;
   line-height: 1.1;
 }
 
-.nav-brand {
-  font-weight: 900;
-  letter-spacing: -0.02em;
-}
-
-/* hover: subtle background only */
 .nav-link:hover {
   background: rgba(255, 255, 255, 0.8);
 }
 
-/* active: underline + slight emphasis (no bubble overlap) */
+.nav-link:active {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .nav-active {
   font-weight: 700;
   text-decoration: underline;
@@ -597,26 +303,107 @@ input, textarea, select, button {
   }
 }
 
-.button-primary {
-  display: inline-block;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid #111;
-  background: #111;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+/* =========================
+   Home mobile centering helpers
+   ========================= */
+
+@media (max-width: 640px) {
+  .home-page {
+    text-align: center;
+  }
+
+  .home-title-row {
+    justify-content: center;
+    flex-direction: column;
+    gap: 10px !important;
+  }
+
+  .home-actions {
+    justify-content: center;
+  }
 }
 
-.button-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+/* =========================
+   Add hub cards (square + centered content)
+   ========================= */
+
+.add-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-top: 24px;
 }
 
-/* Collection gallery grid */
+.add-card {
+  aspect-ratio: 1 / 1;
+  border: 1px solid #eee;
+  border-radius: 18px;
+  background: #fff;
+  padding: 18px;
+
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.add-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+}
+
+/* Center title + desc; keep arrow pinned to bottom */
+.add-card-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-card-title,
+.add-card-desc,
+.add-card-arrow {
+  text-align: center;
+}
+
+.add-card-title {
+  margin-top: auto;
+  font-size: 20px;
+  font-weight: 850;
+  margin-bottom: 10px;
+}
+
+.add-card-desc {
+  color: #666;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 34ch;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: auto;
+}
+
+.add-card-arrow {
+  margin-top: auto;
+  padding-top: 10px;
+  color: #777;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .add-grid {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .add-card {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+/* =========================
+   Collection gallery + toggle
+   ========================= */
+
 .collection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -642,7 +429,7 @@ input, textarea, select, button {
 .collection-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
   padding: 10px;
   display: flex;
@@ -658,7 +445,6 @@ input, textarea, select, button {
   opacity: 1;
 }
 
-/* view toggle buttons */
 .view-toggle {
   display: flex;
   gap: 8px;
@@ -679,35 +465,16 @@ input, textarea, select, button {
   border-color: #111;
 }
 
-/* Home page: center hero on mobile */
-@media (max-width: 640px) {
-  .home .home-hero {
-    flex-direction: column;
-    align-items: center !important;
-    text-align: center;
-    gap: 10px;
-  }
+/* =========================
+   Upload row (Design / Collection)
+   ========================= */
 
-  .home .home-hero h1 {
-    text-align: center;
-  }
-
-  .home .home-actions {
-    justify-content: center;
-  }
-
-  .home .home-subtitle,
-  .home .home-footer {
-    text-align: center;
-  }
-}
-
-/* --- Mobile-friendly upload row (Design page / Collection page) --- */
 .upload-row {
+  margin-top: 10px;
   display: flex;
   gap: 8px;
   align-items: center;
-  flex-wrap: wrap; /* prevents off-screen overflow */
+  flex-wrap: wrap;
 }
 
 .upload-row input[type="text"] {
@@ -720,7 +487,7 @@ input, textarea, select, button {
   min-width: 200px;
 }
 
-/* Make the file picker look like a button */
+/* Make file picker look like a button */
 .upload-row input[type="file"]::file-selector-button {
   border: 1px solid #ddd;
   background: #fff;
@@ -729,6 +496,10 @@ input, textarea, select, button {
   font: inherit;
   cursor: pointer;
   margin-right: 10px;
+}
+
+.upload-row input[type="file"]::file-selector-button:hover {
+  background: #f7f7f7;
 }
 
 /* Safari fallback */
@@ -742,7 +513,6 @@ input, textarea, select, button {
   margin-right: 10px;
 }
 
-/* Stack the row on small screens so nothing gets shoved off-screen */
 @media (max-width: 640px) {
   .upload-row {
     flex-direction: column;
@@ -756,7 +526,7 @@ input, textarea, select, button {
   }
 }
 
-/* --- Variant action buttons (Design page) --- */
+/* Variant action buttons (Design page) */
 .variant-actions {
   display: flex;
   gap: 8px;
@@ -766,59 +536,7 @@ input, textarea, select, button {
 }
 
 .variant-actions button {
-  width: auto;          /* prevents full-width stacking */
-  margin: 0;            /* avoids weird vertical gaps */
-  white-space: nowrap;  /* keeps labels from wrapping */
-}
-
-/* --- Mobile-friendly upload row --- */
-.upload-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.upload-row input[type="text"],
-.upload-row input[type="file"] {
-  margin: 0 !important; /* remove inherited spacing */
-}
-
-.upload-row button {
-  margin: 0 !important; /* stops it from drifting far down */
-}
-
-/* Make the file picker look like a button */
-.upload-row input[type="file"]::file-selector-button {
-  border: 1px solid #ddd;
-  background: #fff;
-  padding: 8px 10px;
-  border-radius: 10px;
-  font: inherit;
-  cursor: pointer;
-  margin-right: 10px;
-}
-
-/* Safari fallback */
-.upload-row input[type="file"]::-webkit-file-upload-button {
-  border: 1px solid #ddd;
-  background: #fff;
-  padding: 8px 10px;
-  border-radius: 10px;
-  font: inherit;
-  cursor: pointer;
-  margin-right: 10px;
-}
-
-@media (max-width: 640px) {
-  .upload-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .upload-row input[type="text"],
-  .upload-row input[type="file"],
-  .upload-row button {
-    width: 100%;
-  }
+  width: auto;
+  margin: 0;
+  white-space: nowrap;
 }
