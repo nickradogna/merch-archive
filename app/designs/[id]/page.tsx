@@ -329,7 +329,7 @@ async function uploadVariantPhoto(variantId: string, file: File, label?: string)
     ))}
   </div>
 )}
-<div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
+<div className="upload-row" style={{ marginTop: 10 }}>
   <input
     type="text"
     placeholder="Label (front, back, tag)…"

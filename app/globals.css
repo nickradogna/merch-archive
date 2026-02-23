@@ -701,3 +701,57 @@ input, textarea, select, button {
     text-align: center;
   }
 }
+
+/* --- Mobile-friendly upload row (Design page / Collection page) --- */
+.upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap; /* prevents off-screen overflow */
+}
+
+.upload-row input[type="text"] {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+.upload-row input[type="file"] {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+/* Make the file picker look like a button */
+.upload-row input[type="file"]::file-selector-button {
+  border: 1px solid #ddd;
+  background: #fff;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+/* Safari fallback */
+.upload-row input[type="file"]::-webkit-file-upload-button {
+  border: 1px solid #ddd;
+  background: #fff;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+/* Stack the row on small screens so nothing gets shoved off-screen */
+@media (max-width: 640px) {
+  .upload-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .upload-row input[type="text"],
+  .upload-row input[type="file"],
+  .upload-row button {
+    width: 100%;
+  }
+}
