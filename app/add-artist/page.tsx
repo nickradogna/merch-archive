@@ -258,7 +258,7 @@ const { error } = await supabase.from("artists").insert({
           setMessage(null);
         }}
         onBlur={() => checkNameExists(name)}
-        placeholder="e.g. Death"
+        placeholder="e.g. Weezer"
       />
     </label>
 
