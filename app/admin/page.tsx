@@ -34,7 +34,10 @@ export default function AdminPage() {
   const [status, setStatus] = useState<Status>("loading");
   const [msg, setMsg] = useState<string | null>(null);
 
-  const [viewer, setViewer] = useState<{ userId: string | null; email: string | null }>({
+  const [viewer, setViewer] = useState<{
+    userId: string | null;
+    email: string | null;
+  }>({
     userId: null,
     email: null,
   });
@@ -49,14 +52,31 @@ export default function AdminPage() {
   });
 
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
-  const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
+  const [usernamesById, setUsernamesById] = useState<Record<string, string>>(
+    {}
+  );
 
   const [artists, setArtists] = useState<any[]>([]);
   const [designs, setDesigns] = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
 
-  const [tab, setTab] = useState<"overview" | "artists" | "designs" | "variants">("overview");
+  const [tab, setTab] = useState<
+    "overview" | "artists" | "designs" | "variants"
+  >("overview");
   const [query, setQuery] = useState("");
+
+  // inline edit state for artists
+  const [artistEdits, setArtistEdits] = useState<
+    Record<
+      string,
+      {
+        origin_country: string;
+        primary_genre: string;
+        photoFile: File | null;
+        saving?: boolean;
+      }
+    >
+  >({});
 
   // --- derived values (hooks still unconditional) ---
   const q = query.trim().toLowerCase();
@@ -64,7 +84,9 @@ export default function AdminPage() {
   const filteredArtists = useMemo(() => {
     if (!q) return artists;
     return artists.filter((a: any) => {
-      const text = `${a.name} ${a.slug || ""}`.toLowerCase();
+      const text = `${a.name} ${a.slug || ""} ${a.origin_country || ""} ${
+        a.primary_genre || ""
+      }`.toLowerCase();
       return text.includes(q);
     });
   }, [artists, q]);
@@ -73,7 +95,8 @@ export default function AdminPage() {
     if (!q) return designs;
     return designs.filter((d: any) => {
       const artist = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
-      const text = `${artist?.name || ""} ${d.year || ""} ${d.title || ""}`.toLowerCase();
+      const text =
+        `${artist?.name || ""} ${d.year || ""} ${d.title || ""}`.toLowerCase();
       return text.includes(q);
     });
   }, [designs, q]);
@@ -82,10 +105,15 @@ export default function AdminPage() {
     if (!q) return variants;
     return variants.filter((v: any) => {
       const design = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
-      const artist = Array.isArray(design?.artists) ? design.artists[0] : design?.artists;
-      const text = `${artist?.name || ""} ${design?.year || ""} ${design?.title || ""} ${v.base_color || ""} ${
-        v.garment_type || ""
-      } ${v.manufacturer || ""}`.toLowerCase();
+      const artist = Array.isArray(design?.artists)
+        ? design.artists[0]
+        : design?.artists;
+      const text =
+        `${artist?.name || ""} ${design?.year || ""} ${
+          design?.title || ""
+        } ${v.base_color || ""} ${v.garment_type || ""} ${
+          v.manufacturer || ""
+        }`.toLowerCase();
       return text.includes(q);
     });
   }, [variants, q]);
@@ -134,12 +162,30 @@ export default function AdminPage() {
       const since7d = isoDaysAgo(7);
 
       const [a24, d24, v24, a7, d7, v7] = await Promise.all([
-        supabase.from("artists").select("id", { count: "exact", head: true }).gte("created_at", since24h),
-        supabase.from("designs").select("id", { count: "exact", head: true }).gte("created_at", since24h),
-        supabase.from("variants").select("id", { count: "exact", head: true }).gte("created_at", since24h),
-        supabase.from("artists").select("id", { count: "exact", head: true }).gte("created_at", since7d),
-        supabase.from("designs").select("id", { count: "exact", head: true }).gte("created_at", since7d),
-        supabase.from("variants").select("id", { count: "exact", head: true }).gte("created_at", since7d),
+        supabase
+          .from("artists")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", since24h),
+        supabase
+          .from("designs")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", since24h),
+        supabase
+          .from("variants")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", since24h),
+        supabase
+          .from("artists")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", since7d),
+        supabase
+          .from("designs")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", since7d),
+        supabase
+          .from("variants")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", since7d),
       ]);
 
       setCounts({
@@ -154,15 +200,17 @@ export default function AdminPage() {
       const [artistsRes, designsRes, variantsRes] = await Promise.all([
         supabase
           .from("artists")
-          .select("id,name,slug,is_hidden,created_at,created_by")
+          .select(
+            "id,name,slug,photo_url,origin_country,primary_genre,is_hidden,created_at,created_by"
+          )
           .order("created_at", { ascending: false })
-          .limit(50),
+          .limit(80),
 
         supabase
           .from("designs")
           .select("id,title,year,is_hidden,created_at,created_by, artists(name,slug)")
           .order("created_at", { ascending: false })
-          .limit(50),
+          .limit(60),
 
         supabase
           .from("variants")
@@ -170,12 +218,38 @@ export default function AdminPage() {
             "id,base_color,garment_type,manufacturer,is_hidden,created_at,created_by, designs(id,title,year, artists(name,slug))"
           )
           .order("created_at", { ascending: false })
-          .limit(50),
+          .limit(60),
       ]);
 
-      setArtists(artistsRes.data || []);
+      const artistRows = artistsRes.data || [];
+      setArtists(artistRows);
       setDesigns(designsRes.data || []);
       setVariants(variantsRes.data || []);
+
+      // seed edit buffers for artist meta
+      setArtistEdits((prev) => {
+        const next = { ...prev };
+        for (const a of artistRows) {
+          if (!next[a.id]) {
+            next[a.id] = {
+              origin_country: a.origin_country || "",
+              primary_genre: a.primary_genre || "",
+              photoFile: null,
+              saving: false,
+            };
+          } else {
+            // keep any in-progress photoFile, but refresh text if empty
+            next[a.id] = {
+              ...next[a.id],
+              origin_country:
+                next[a.id].origin_country ?? (a.origin_country || ""),
+              primary_genre:
+                next[a.id].primary_genre ?? (a.primary_genre || ""),
+            };
+          }
+        }
+        return next;
+      });
 
       const t: TimelineItem[] = [];
 
@@ -185,7 +259,11 @@ export default function AdminPage() {
           created_at: a.created_at,
           created_by: a.created_by,
           title: a.name,
-          subtitle: a.slug ? `/${a.slug}${a.is_hidden ? " • hidden" : ""}` : a.is_hidden ? "hidden" : undefined,
+          subtitle: a.slug
+            ? `/${a.slug}${a.is_hidden ? " • hidden" : ""}`
+            : a.is_hidden
+            ? "hidden"
+            : undefined,
           href: a.slug ? `/artists/${a.slug}` : "/artists",
         });
       });
@@ -206,7 +284,9 @@ export default function AdminPage() {
 
       (variantsRes.data || []).forEach((v: any) => {
         const design = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
-        const artist = Array.isArray(design?.artists) ? design.artists[0] : design?.artists;
+        const artist = Array.isArray(design?.artists)
+          ? design.artists[0]
+          : design?.artists;
         const artistName = artist?.name ? String(artist.name) : "Unknown artist";
         const year = design?.year ? String(design.year) : "—";
         const designTitle = design?.title ? String(design.title) : "Unknown design";
@@ -216,18 +296,28 @@ export default function AdminPage() {
           created_at: v.created_at,
           created_by: v.created_by,
           title: `${artistName} — ${year} – ${designTitle}`,
-          subtitle: `${v.base_color} ${v.garment_type} — ${v.manufacturer}${v.is_hidden ? " • hidden" : ""}`,
+          subtitle: `${v.base_color} ${v.garment_type} — ${v.manufacturer}${
+            v.is_hidden ? " • hidden" : ""
+          }`,
           href: design?.id ? `/designs/${design.id}` : "/artists",
         });
       });
 
-      t.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      t.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
       const sliced = t.slice(0, 40);
       setTimeline(sliced);
 
-      const ids = Array.from(new Set(sliced.map((x) => x.created_by).filter(Boolean))) as string[];
+      const ids = Array.from(
+        new Set(sliced.map((x) => x.created_by).filter(Boolean))
+      ) as string[];
       if (ids.length) {
-        const { data: profs } = await supabase.from("profiles").select("user_id,username").in("user_id", ids);
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id,username")
+          .in("user_id", ids);
         const map: Record<string, string> = {};
         (profs || []).forEach((p: any) => {
           if (p.user_id && p.username) map[p.user_id] = p.username;
@@ -242,7 +332,11 @@ export default function AdminPage() {
   }, [status]);
 
   // ---- Hide/unhide via RPC (bypasses table RLS safely) ----
-  async function toggleHidden(table: "artists" | "designs" | "variants", id: string, nextHidden: boolean) {
+  async function toggleHidden(
+    table: "artists" | "designs" | "variants",
+    id: string,
+    nextHidden: boolean
+  ) {
     setMsg(null);
 
     const { error } = await supabase.rpc("admin_set_hidden", {
@@ -256,10 +350,129 @@ export default function AdminPage() {
       return;
     }
 
-    const updater = (rows: any[]) => rows.map((r) => (r.id === id ? { ...r, is_hidden: nextHidden } : r));
+    const updater = (rows: any[]) =>
+      rows.map((r) => (r.id === id ? { ...r, is_hidden: nextHidden } : r));
     if (table === "artists") setArtists((s) => updater(s));
     if (table === "designs") setDesigns((s) => updater(s));
     if (table === "variants") setVariants((s) => updater(s));
+  }
+
+  function setArtistEdit(
+    artistId: string,
+    patch: Partial<{
+      origin_country: string;
+      primary_genre: string;
+      photoFile: File | null;
+      saving: boolean;
+    }>
+  ) {
+    setArtistEdits((prev) => ({
+      ...prev,
+      [artistId]: {
+        origin_country: prev[artistId]?.origin_country ?? "",
+        primary_genre: prev[artistId]?.primary_genre ?? "",
+        photoFile: prev[artistId]?.photoFile ?? null,
+        saving: prev[artistId]?.saving ?? false,
+        ...patch,
+      },
+    }));
+  }
+
+  async function saveArtistMeta(artist: any) {
+    setMsg(null);
+
+    const edit = artistEdits[artist.id] || {
+      origin_country: artist.origin_country || "",
+      primary_genre: artist.primary_genre || "",
+      photoFile: null,
+      saving: false,
+    };
+
+    setArtistEdit(artist.id, { saving: true });
+
+    try {
+      let nextPhotoUrl: string | null = artist.photo_url || null;
+
+      // upload new photo if provided
+      if (edit.photoFile) {
+        const file = edit.photoFile;
+        const fileExt = file.name.split(".").pop() || "jpg";
+        const fileName = `artist-${artist.id}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("artist-photos")
+          .upload(fileName, file);
+
+        if (uploadError) {
+          setMsg(uploadError.message);
+          setArtistEdit(artist.id, { saving: false });
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("artist-photos")
+          .getPublicUrl(fileName);
+
+        nextPhotoUrl = publicUrlData.publicUrl || null;
+      }
+
+      const payload: any = {
+        origin_country: edit.origin_country.trim() || null,
+        primary_genre: edit.primary_genre.trim() || null,
+        photo_url: nextPhotoUrl,
+      };
+
+      const { error } = await supabase
+        .from("artists")
+        .update(payload)
+        .eq("id", artist.id);
+
+      if (error) {
+        setMsg(error.message);
+        setArtistEdit(artist.id, { saving: false });
+        return;
+      }
+
+      // reflect in local state + clear file
+      setArtists((prev) =>
+        prev.map((a) =>
+          a.id === artist.id
+            ? {
+                ...a,
+                origin_country: payload.origin_country,
+                primary_genre: payload.primary_genre,
+                photo_url: payload.photo_url,
+              }
+            : a
+        )
+      );
+
+      setArtistEdit(artist.id, { photoFile: null, saving: false });
+    } catch (e: any) {
+      setMsg(e?.message || "Failed to save artist.");
+      setArtistEdit(artist.id, { saving: false });
+    }
+  }
+
+  async function removeArtistPhoto(artistId: string) {
+    setMsg(null);
+    setArtistEdit(artistId, { saving: true });
+
+    const { error } = await supabase
+      .from("artists")
+      .update({ photo_url: null })
+      .eq("id", artistId);
+
+    if (error) {
+      setMsg(error.message);
+      setArtistEdit(artistId, { saving: false });
+      return;
+    }
+
+    setArtists((prev) =>
+      prev.map((a) => (a.id === artistId ? { ...a, photo_url: null } : a))
+    );
+    setArtistEdit(artistId, { photoFile: null, saving: false });
   }
 
   // ---- Render ----
@@ -296,7 +509,9 @@ export default function AdminPage() {
   return (
     <main>
       <h1>Admin</h1>
-      <p style={{ color: "#666", marginTop: 6 }}>Calm status overview + recent activity + hide tools.</p>
+      <p style={{ color: "#666", marginTop: 6 }}>
+        Calm status overview + recent activity + hide tools + artist meta.
+      </p>
 
       {/* Debug */}
       <div
@@ -325,23 +540,37 @@ export default function AdminPage() {
             background: "#fff5f5",
           }}
         >
-          <div style={{ color: "#b00020", fontWeight: 700, marginBottom: 4 }}>Error</div>
+          <div style={{ color: "#b00020", fontWeight: 700, marginBottom: 4 }}>
+            Error
+          </div>
           <div style={{ color: "#b00020" }}>{msg}</div>
         </div>
       )}
 
       {/* Tabs */}
       <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button className={tab === "overview" ? "button-primary" : ""} onClick={() => setTab("overview")}>
+        <button
+          className={tab === "overview" ? "button-primary" : ""}
+          onClick={() => setTab("overview")}
+        >
           Overview
         </button>
-        <button className={tab === "artists" ? "button-primary" : ""} onClick={() => setTab("artists")}>
+        <button
+          className={tab === "artists" ? "button-primary" : ""}
+          onClick={() => setTab("artists")}
+        >
           Artists
         </button>
-        <button className={tab === "designs" ? "button-primary" : ""} onClick={() => setTab("designs")}>
+        <button
+          className={tab === "designs" ? "button-primary" : ""}
+          onClick={() => setTab("designs")}
+        >
           Designs
         </button>
-        <button className={tab === "variants" ? "button-primary" : ""} onClick={() => setTab("variants")}>
+        <button
+          className={tab === "variants" ? "button-primary" : ""}
+          onClick={() => setTab("variants")}
+        >
           Variants
         </button>
       </div>
@@ -377,19 +606,25 @@ export default function AdminPage() {
             <div className="stat-card">
               <div className="stat-number">{counts.artists24h}</div>
               <div className="stat-label">New artists (24h)</div>
-              <div style={{ color: "#777", marginTop: 6, fontSize: 12 }}>{counts.artists7d} this week</div>
+              <div style={{ color: "#777", marginTop: 6, fontSize: 12 }}>
+                {counts.artists7d} this week
+              </div>
             </div>
 
             <div className="stat-card">
               <div className="stat-number">{counts.designs24h}</div>
               <div className="stat-label">New designs (24h)</div>
-              <div style={{ color: "#777", marginTop: 6, fontSize: 12 }}>{counts.designs7d} this week</div>
+              <div style={{ color: "#777", marginTop: 6, fontSize: 12 }}>
+                {counts.designs7d} this week
+              </div>
             </div>
 
             <div className="stat-card">
               <div className="stat-number">{counts.variants24h}</div>
               <div className="stat-label">New variants (24h)</div>
-              <div style={{ color: "#777", marginTop: 6, fontSize: 12 }}>{counts.variants7d} this week</div>
+              <div style={{ color: "#777", marginTop: 6, fontSize: 12 }}>
+                {counts.variants7d} this week
+              </div>
             </div>
           </div>
 
@@ -401,9 +636,16 @@ export default function AdminPage() {
             <div style={{ marginTop: 10 }}>
               {timeline.map((item, idx) => {
                 const who =
-                  item.created_by && usernamesById[item.created_by] ? usernamesById[item.created_by] : null;
+                  item.created_by && usernamesById[item.created_by]
+                    ? usernamesById[item.created_by]
+                    : null;
 
-                const badge = item.type === "artist" ? "Artist" : item.type === "design" ? "Design" : "Variant";
+                const badge =
+                  item.type === "artist"
+                    ? "Artist"
+                    : item.type === "design"
+                    ? "Design"
+                    : "Variant";
 
                 return (
                   <div
@@ -441,7 +683,9 @@ export default function AdminPage() {
                       </div>
 
                       {item.subtitle && (
-                        <div style={{ color: "#666", fontSize: 13, marginTop: 4 }}>{item.subtitle}</div>
+                        <div style={{ color: "#666", fontSize: 13, marginTop: 4 }}>
+                          {item.subtitle}
+                        </div>
                       )}
 
                       <div style={{ color: "#777", fontSize: 12, marginTop: 6 }}>
@@ -463,35 +707,167 @@ export default function AdminPage() {
             <p style={{ color: "#666" }}>No artists found.</p>
           ) : (
             <div style={{ display: "grid", gap: 10 }}>
-              {filteredArtists.map((a: any) => (
-                <div
-                  key={a.id}
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    alignItems: "center",
-                    padding: "10px 12px",
-                    border: "1px solid #eee",
-                    borderRadius: 12,
-                    background: "#fff",
-                  }}
-                >
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontWeight: 800 }}>
-                      <a href={a.slug ? `/artists/${a.slug}` : "/artists"} style={{ color: "inherit" }}>
-                        {a.name}
-                      </a>
-                    </div>
-                    <div style={{ fontSize: 12, color: "#777", marginTop: 4 }}>
-                      {a.slug ? `/${a.slug}` : "—"} {a.is_hidden ? " • hidden" : ""}
+              {filteredArtists.map((a: any) => {
+                const edit = artistEdits[a.id] || {
+                  origin_country: a.origin_country || "",
+                  primary_genre: a.primary_genre || "",
+                  photoFile: null,
+                  saving: false,
+                };
+
+                return (
+                  <div
+                    key={a.id}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "flex-start",
+                      padding: "12px 12px",
+                      border: "1px solid #eee",
+                      borderRadius: 12,
+                      background: "#fff",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {/* photo */}
+                    {a.photo_url ? (
+                      <img
+                        src={a.photo_url}
+                        alt={`${a.name} photo`}
+                        style={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: 12,
+                          objectFit: "cover",
+                          border: "1px solid #e0e0e0",
+                          background: "#f2f2f2",
+                          flex: "0 0 auto",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: 12,
+                          border: "1px solid #e0e0e0",
+                          background: "#f2f2f2",
+                          display: "grid",
+                          placeItems: "center",
+                          color: "#777",
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        —
+                      </div>
+                    )}
+
+                    {/* main */}
+                    <div style={{ minWidth: 240, flex: 1 }}>
+                      <div style={{ fontWeight: 900 }}>
+                        <a
+                          href={a.slug ? `/artists/${a.slug}` : "/artists"}
+                          style={{ color: "inherit" }}
+                        >
+                          {a.name}
+                        </a>
+                      </div>
+
+                      <div style={{ fontSize: 12, color: "#777", marginTop: 4 }}>
+                        {a.slug ? `/${a.slug}` : "—"}{" "}
+                        {a.is_hidden ? " • hidden" : ""}
+                      </div>
+
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                          gap: 10,
+                          marginTop: 10,
+                          maxWidth: 720,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
+                            Country
+                          </div>
+                          <input
+                            value={edit.origin_country}
+                            onChange={(e) =>
+                              setArtistEdit(a.id, { origin_country: e.target.value })
+                            }
+                            placeholder="e.g., USA"
+                          />
+                        </div>
+
+                        <div>
+                          <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
+                            Genre
+                          </div>
+                          <input
+                            value={edit.primary_genre}
+                            onChange={(e) =>
+                              setArtistEdit(a.id, { primary_genre: e.target.value })
+                            }
+                            placeholder="e.g., Hardcore"
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>
+                          Main artist photo
+                        </div>
+
+                        <div
+                          className="upload-row"
+                          style={{ marginTop: 0, alignItems: "center" }}
+                        >
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) =>
+                              setArtistEdit(a.id, {
+                                photoFile: e.target.files?.[0] || null,
+                              })
+                            }
+                          />
+
+                          <button
+                            className="button-primary"
+                            onClick={() => saveArtistMeta(a)}
+                            disabled={!!edit.saving}
+                            style={{ opacity: edit.saving ? 0.6 : 1 }}
+                          >
+                            {edit.saving ? "Saving…" : "Save"}
+                          </button>
+
+                          <button
+                            onClick={() => toggleHidden("artists", a.id, !a.is_hidden)}
+                            disabled={!!edit.saving}
+                          >
+                            {a.is_hidden ? "Unhide" : "Hide"}
+                          </button>
+
+                          <button
+                            onClick={() => removeArtistPhoto(a.id)}
+                            disabled={!!edit.saving}
+                            style={{ opacity: edit.saving ? 0.6 : 1 }}
+                          >
+                            Remove photo
+                          </button>
+                        </div>
+
+                        {edit.photoFile && (
+                          <div style={{ marginTop: 6, fontSize: 12, color: "#777" }}>
+                            Selected: {edit.photoFile.name}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-
-                  <button onClick={() => toggleHidden("artists", a.id, !a.is_hidden)}>
-                    {a.is_hidden ? "Unhide" : "Hide"}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -570,12 +946,16 @@ export default function AdminPage() {
                   >
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ fontWeight: 800 }}>
-                        <a href={design?.id ? `/designs/${design.id}` : "/artists"} style={{ color: "inherit" }}>
+                        <a
+                          href={design?.id ? `/designs/${design.id}` : "/artists"}
+                          style={{ color: "inherit" }}
+                        >
                           {artistName} — {year} – {designTitle}
                         </a>
                       </div>
                       <div style={{ fontSize: 12, color: "#777", marginTop: 4 }}>
-                        {v.base_color} {v.garment_type} — {v.manufacturer} {v.is_hidden ? " • hidden" : ""}
+                        {v.base_color} {v.garment_type} — {v.manufacturer}{" "}
+                        {v.is_hidden ? " • hidden" : ""}
                       </div>
                     </div>
 
