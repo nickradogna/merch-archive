@@ -9,7 +9,9 @@ export default function CollectionPage() {
   const [ownershipPhotos, setOwnershipPhotos] = useState<Record<string, any[]>>(
     {}
   );
-  const [sortMode, setSortMode] = useState<"recent" | "artist" | "year">("recent");
+  const [sortMode, setSortMode] = useState<"recent" | "artist" | "year">(
+    "recent"
+  );
   const [query, setQuery] = useState("");
   const [onlyWithPhotos, setOnlyWithPhotos] = useState(false);
   const [groupByArtist, setGroupByArtist] = useState(false);
@@ -112,11 +114,15 @@ export default function CollectionPage() {
 
     const url = publicUrlData.publicUrl;
 
-    const { error: insertError } = await supabase.from("ownership_photos").insert({
-      ownership_id: ownershipId,
-      url,
-      label: label?.trim() || null,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from("ownership_photos")
+      .insert({
+        ownership_id: ownershipId,
+        url,
+        label: label?.trim() || null,
+      })
+      .select("id, ownership_id, url, label, created_at")
+      .single();
 
     if (insertError) {
       setMessage(insertError.message);
@@ -126,12 +132,110 @@ export default function CollectionPage() {
     setOwnershipPhotos((prev) => {
       const next = { ...prev };
       const arr = next[ownershipId] ? [...next[ownershipId]] : [];
-      arr.push({ id: crypto.randomUUID(), ownership_id: ownershipId, url, label });
+      arr.push(inserted || { id: crypto.randomUUID(), ownership_id: ownershipId, url, label });
       next[ownershipId] = arr;
       return next;
     });
 
     setMessage("Photo uploaded.");
+  }
+
+  // ---- Ownership photo editing / deleting ----
+  async function editOwnershipPhotoLabel(photoId: string, ownershipId: string) {
+    setMessage(null);
+
+    const existing = (ownershipPhotos[ownershipId] || []).find(
+      (p: any) => p.id === photoId
+    );
+    const currentLabel = existing?.label ?? "";
+
+    const nextLabelRaw = window.prompt("Edit label (blank to clear):", currentLabel);
+    if (nextLabelRaw === null) return; // cancel
+
+    const nextLabel = nextLabelRaw.trim() || null;
+
+    const { error } = await supabase
+      .from("ownership_photos")
+      .update({ label: nextLabel })
+      .eq("id", photoId);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setOwnershipPhotos((prev) => {
+      const next = { ...prev };
+      next[ownershipId] = (next[ownershipId] || []).map((p: any) =>
+        p.id === photoId ? { ...p, label: nextLabel } : p
+      );
+      return next;
+    });
+
+    setMessage("Label updated.");
+  }
+
+  function parseStoragePathFromPublicUrl(publicUrl: string) {
+    // Public URLs look like: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+    // We need the <path> relative to bucket for storage.remove([path]).
+    try {
+      const u = new URL(publicUrl);
+      const marker = "/storage/v1/object/public/ownership-photos/";
+      const idx = u.pathname.indexOf(marker);
+      if (idx === -1) return null;
+      return u.pathname.slice(idx + marker.length);
+    } catch {
+      return null;
+    }
+  }
+
+  async function deleteOwnershipPhoto(photoId: string, ownershipId: string) {
+    setMessage(null);
+
+    const photo = (ownershipPhotos[ownershipId] || []).find(
+      (p: any) => p.id === photoId
+    );
+
+    const ok = window.confirm("Delete this photo? This cannot be undone.");
+    if (!ok) return;
+
+    // 1) Delete DB row (authoritative)
+    const { error } = await supabase
+      .from("ownership_photos")
+      .delete()
+      .eq("id", photoId);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    // 2) Update UI immediately
+    setOwnershipPhotos((prev) => {
+      const next = { ...prev };
+      next[ownershipId] = (next[ownershipId] || []).filter(
+        (p: any) => p.id !== photoId
+      );
+      return next;
+    });
+
+    // 3) Best-effort delete from Storage (may be blocked by bucket policies; OK if it fails)
+    const path = photo?.url ? parseStoragePathFromPublicUrl(photo.url) : null;
+    if (path) {
+      const { error: storageErr } = await supabase.storage
+        .from("ownership-photos")
+        .remove([path]);
+
+      // Don’t fail the user if storage delete is blocked — but let them know.
+      if (storageErr) {
+        setMessage(
+          "Deleted photo record. Note: storage file could not be removed (bucket policy may block deletion)."
+        );
+        return;
+      }
+    }
+
+    setMessage("Photo deleted.");
   }
 
   // -------- CSV Export helpers --------
@@ -238,7 +342,9 @@ export default function CollectionPage() {
     .filter((row) => {
       const artistName = row?.variants?.designs?.artists?.name ?? "";
       const title = row?.variants?.designs?.title ?? "";
-      const text = `${artistName} ${title} ${row?.variants?.base_color ?? ""} ${row?.variants?.manufacturer ?? ""}`.toLowerCase();
+      const text = `${artistName} ${title} ${row?.variants?.base_color ?? ""} ${
+        row?.variants?.manufacturer ?? ""
+      }`.toLowerCase();
       return text.includes(query.toLowerCase());
     })
     .filter((row) =>
@@ -263,6 +369,74 @@ export default function CollectionPage() {
   const uniqueArtists = new Set(
     items.map((row) => row?.variants?.designs?.artists?.name)
   ).size;
+
+  function renderPhotoGrid(ownershipId: string) {
+    const photos = ownershipPhotos[ownershipId] || [];
+    if (!photos.length) return null;
+
+    return (
+      <div
+        style={{
+          marginTop: 10,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+          gap: 10,
+        }}
+      >
+        {photos.map((p: any) => (
+          <figure key={p.id} style={{ margin: 0 }}>
+            <img
+              src={p.url}
+              alt={p.label || "Ownership photo"}
+              style={{
+                width: "100%",
+                aspectRatio: "1 / 1",
+                objectFit: "cover",
+                borderRadius: 8,
+                border: "1px solid #e0e0e0",
+                background: "#f2f2f2",
+              }}
+            />
+
+            {p.label && (
+              <figcaption style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                {p.label}
+              </figcaption>
+            )}
+
+            <div style={{ marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                onClick={() => editOwnershipPhotoLabel(p.id, ownershipId)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  border: "1px solid #ddd",
+                  background: "#fff",
+                  fontSize: 12,
+                }}
+              >
+                Edit label
+              </button>
+
+              <button
+                onClick={() => deleteOwnershipPhoto(p.id, ownershipId)}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  border: "1px solid #ffd7d7",
+                  background: "#fff5f5",
+                  color: "#b00020",
+                  fontSize: 12,
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </figure>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <main style={{ padding: "2rem" }}>
@@ -321,7 +495,9 @@ export default function CollectionPage() {
         }}
       />
 
-      <label style={{ display: "block", marginBottom: 16, color: "#666", fontSize: 13 }}>
+      <label
+        style={{ display: "block", marginBottom: 16, color: "#666", fontSize: 13 }}
+      >
         <input
           type="checkbox"
           checked={onlyWithPhotos}
@@ -331,7 +507,9 @@ export default function CollectionPage() {
         Only show items with photos
       </label>
 
-      <label style={{ display: "block", marginBottom: 16, color: "#666", fontSize: 13 }}>
+      <label
+        style={{ display: "block", marginBottom: 16, color: "#666", fontSize: 13 }}
+      >
         <input
           type="checkbox"
           checked={groupByArtist}
@@ -353,7 +531,9 @@ export default function CollectionPage() {
             const designHref = design?.id ? `/designs/${design.id}` : null;
 
             const yearObtained =
-              row?.year_obtained !== null && row?.year_obtained !== undefined && String(row.year_obtained).trim() !== ""
+              row?.year_obtained !== null &&
+              row?.year_obtained !== undefined &&
+              String(row.year_obtained).trim() !== ""
                 ? String(row.year_obtained)
                 : null;
 
@@ -406,40 +586,9 @@ export default function CollectionPage() {
                   </div>
                 )}
 
-                {(ownershipPhotos[row.id] || []).length > 0 && (
-                  <div
-                    style={{
-                      marginTop: 10,
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                      gap: 10,
-                    }}
-                  >
-                    {(ownershipPhotos[row.id] || []).map((p: any) => (
-                      <figure key={p.id} style={{ margin: 0 }}>
-                        <img
-                          src={p.url}
-                          alt={p.label || "Ownership photo"}
-                          style={{
-                            width: "100%",
-                            aspectRatio: "1 / 1",
-                            objectFit: "cover",
-                            borderRadius: 8,
-                            border: "1px solid #e0e0e0",
-                            background: "#f2f2f2",
-                          }}
-                        />
-                        {p.label && (
-                          <figcaption style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                            {p.label}
-                          </figcaption>
-                        )}
-                      </figure>
-                    ))}
-                  </div>
-                )}
+                {renderPhotoGrid(row.id)}
 
-                <div className="upload-row">
+                <div className="upload-row" style={{ marginTop: 12 }}>
                   <input
                     type="text"
                     placeholder="Label (front, back, tag)…"
@@ -457,7 +606,8 @@ export default function CollectionPage() {
                   <button
                     className="button-primary"
                     onClick={(e) => {
-                      const wrap = (e.currentTarget.parentElement as HTMLElement) || null;
+                      const wrap =
+                        (e.currentTarget.parentElement as HTMLElement) || null;
                       if (!wrap) return;
 
                       const labelInput = wrap.querySelector(
@@ -491,7 +641,6 @@ export default function CollectionPage() {
       ) : (
         <div>
           {groupedByArtist.map(([artistName, rows]) => {
-            // Try to preserve your clickable artist page when grouping
             const anyRow = (rows as any[])[0];
             const a = anyRow?.variants?.designs?.artists;
             const artistHref = a?.slug ? `/artists/${a.slug}` : null;
@@ -514,7 +663,9 @@ export default function CollectionPage() {
                     const designHref = design?.id ? `/designs/${design.id}` : null;
 
                     const yearObtained =
-                      row?.year_obtained !== null && row?.year_obtained !== undefined && String(row.year_obtained).trim() !== ""
+                      row?.year_obtained !== null &&
+                      row?.year_obtained !== undefined &&
+                      String(row.year_obtained).trim() !== ""
                         ? String(row.year_obtained)
                         : null;
 
@@ -557,40 +708,9 @@ export default function CollectionPage() {
                           </div>
                         )}
 
-                        {(ownershipPhotos[row.id] || []).length > 0 && (
-                          <div
-                            style={{
-                              marginTop: 10,
-                              display: "grid",
-                              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-                              gap: 10,
-                            }}
-                          >
-                            {(ownershipPhotos[row.id] || []).map((p: any) => (
-                              <figure key={p.id} style={{ margin: 0 }}>
-                                <img
-                                  src={p.url}
-                                  alt={p.label || "Ownership photo"}
-                                  style={{
-                                    width: "100%",
-                                    aspectRatio: "1 / 1",
-                                    objectFit: "cover",
-                                    borderRadius: 8,
-                                    border: "1px solid #e0e0e0",
-                                    background: "#f2f2f2",
-                                  }}
-                                />
-                                {p.label && (
-                                  <figcaption style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                                    {p.label}
-                                  </figcaption>
-                                )}
-                              </figure>
-                            ))}
-                          </div>
-                        )}
+                        {renderPhotoGrid(row.id)}
 
-                        <div className="upload-row">
+                        <div className="upload-row" style={{ marginTop: 12 }}>
                           <input
                             type="text"
                             placeholder="Label (front, back, tag)…"
@@ -609,7 +729,8 @@ export default function CollectionPage() {
                             className="button-primary"
                             onClick={(e) => {
                               const wrap =
-                                (e.currentTarget.parentElement as HTMLElement) || null;
+                                (e.currentTarget.parentElement as HTMLElement) ||
+                                null;
                               if (!wrap) return;
 
                               const labelInput = wrap.querySelector(
