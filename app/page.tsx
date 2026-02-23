@@ -40,17 +40,17 @@ export default function HomePage() {
     }>
   >([]);
 
-    const [topArtists, setTopArtists] = useState<
-  Array<{
-    artist_id: string;
-    artist_name: string;
-    artist_slug: string;
-    photo_url: string | null;
-    origin_country: string | null;
-    primary_genre: string | null;
-    owned_count: number;
-  }>
->([]);
+  const [topArtists, setTopArtists] = useState<
+    Array<{
+      artist_id: string;
+      artist_name: string;
+      artist_slug: string;
+      photo_url: string | null;
+      origin_country: string | null;
+      primary_genre: string | null;
+      owned_count: number;
+    }>
+  >([]);
 
   useEffect(() => {
     async function load() {
@@ -102,121 +102,123 @@ export default function HomePage() {
 
       if (ownedErr || !ownedRows) {
         setRecent([]);
-        return;
-      }
+      } else {
+        const rows = ownedRows as RecentRow[];
 
-      const rows = ownedRows as RecentRow[];
+        // profiles for these user_ids (and only public)
+        const userIds = Array.from(new Set(rows.map((r) => r.user_id))).filter(
+          Boolean
+        );
 
-      // profiles for these user_ids (and only public)
-      const userIds = Array.from(new Set(rows.map((r) => r.user_id))).filter(Boolean);
+        const { data: profiles, error: profErr } = await supabase
+          .from("profiles")
+          .select("user_id, username, avatar_url, is_collection_public")
+          .in("user_id", userIds);
 
-      const { data: profiles, error: profErr } = await supabase
-        .from("profiles")
-        .select("user_id, username, avatar_url, is_collection_public")
-        .in("user_id", userIds);
+        if (profErr || !profiles) {
+          setRecent([]);
+        } else {
+          const publicProfiles = new Map<
+            string,
+            { username: string; avatar_url: string | null }
+          >();
 
-      if (profErr || !profiles) {
-        setRecent([]);
-        return;
-      }
-
-      const publicProfiles = new Map<
-        string,
-        { username: string; avatar_url: string | null }
-      >();
-
-      (profiles as any[]).forEach((p) => {
-        if (p.is_collection_public && p.username) {
-          publicProfiles.set(p.user_id, {
-            username: p.username,
-            avatar_url: p.avatar_url || null,
+          (profiles as any[]).forEach((p) => {
+            if (p.is_collection_public && p.username) {
+              publicProfiles.set(p.user_id, {
+                username: p.username,
+                avatar_url: p.avatar_url || null,
+              });
+            }
           });
+
+          // ownership photos (thumbnails)
+          const ownershipIds = rows.map((r) => r.id);
+          const { data: op, error: opErr } = await supabase
+            .from("ownership_photos")
+            .select("ownership_id, url, created_at")
+            .in("ownership_id", ownershipIds)
+            .order("created_at", { ascending: true });
+
+          const ownershipPhotoMap: Record<string, string> = {};
+          if (!opErr && op) {
+            (op as any[]).forEach((p) => {
+              if (!ownershipPhotoMap[p.ownership_id] && p.url) {
+                ownershipPhotoMap[p.ownership_id] = p.url;
+              }
+            });
+          }
+
+          // variant photos (fallback #2) — optional table
+          const variantIds = Array.from(
+            new Set(
+              rows
+                .map((r: any) => {
+                  const v = Array.isArray(r.variants) ? r.variants[0] : r.variants;
+                  return v?.id;
+                })
+                .filter(Boolean)
+            )
+          );
+
+          const variantPhotoMap: Record<string, string> = {};
+          if (variantIds.length) {
+            const { data: vp, error: vpErr } = await supabase
+              .from("variant_photos")
+              .select("variant_id, url, created_at")
+              .in("variant_id", variantIds)
+              .order("created_at", { ascending: true });
+
+            // If the table doesn't exist, vpErr will be set — just ignore.
+            if (!vpErr && vp) {
+              (vp as any[]).forEach((p) => {
+                if (!variantPhotoMap[p.variant_id] && p.url) {
+                  variantPhotoMap[p.variant_id] = p.url;
+                }
+              });
+            }
+          }
+
+          // Build feed items, filter to public profiles, limit to 12
+          const feed = rows
+            .filter((r) => publicProfiles.has(r.user_id))
+            .map((r) => {
+              const prof = publicProfiles.get(r.user_id)!;
+
+              const v = Array.isArray(r.variants) ? r.variants[0] : r.variants;
+              const d = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
+              const a = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
+
+              const ownershipImg = ownershipPhotoMap[r.id];
+              const variantImg = v?.id ? variantPhotoMap[v.id] : null;
+              const designImg = d?.primary_photo_url || null;
+
+              return {
+                ownership_id: r.id,
+                created_at: r.created_at,
+                username: prof.username,
+                avatar_url: prof.avatar_url,
+                artist_name: a?.name || "Unknown artist",
+                year: d?.year ?? null,
+                title: d?.title || "Untitled",
+                design_id: d?.id,
+                base_color: v?.base_color || null,
+                garment_type: v?.garment_type || null,
+                image_url: ownershipImg || variantImg || designImg,
+              };
+            })
+            .slice(0, 12);
+
+          setRecent(feed);
         }
-      });
-
-      // ownership photos (thumbnails)
-const ownershipIds = rows.map((r) => r.id);
-const { data: op, error: opErr } = await supabase
-  .from("ownership_photos")
-  .select("ownership_id, url, created_at")
-  .in("ownership_id", ownershipIds)
-  .order("created_at", { ascending: true });
-
-const ownershipPhotoMap: Record<string, string> = {};
-if (!opErr && op) {
-  (op as any[]).forEach((p) => {
-    if (!ownershipPhotoMap[p.ownership_id] && p.url) {
-      ownershipPhotoMap[p.ownership_id] = p.url;
-    }
-  });
-}
-
-// variant photos (fallback #2) — optional table
-const variantIds = Array.from(
-  new Set(
-    rows
-      .map((r: any) => {
-        const v = Array.isArray(r.variants) ? r.variants[0] : r.variants;
-        return v?.id;
-      })
-      .filter(Boolean)
-  )
-);
-
-const variantPhotoMap: Record<string, string> = {};
-if (variantIds.length) {
-  const { data: vp, error: vpErr } = await supabase
-    .from("variant_photos")
-    .select("variant_id, url, created_at")
-    .in("variant_id", variantIds)
-    .order("created_at", { ascending: true });
-
-  // If the table doesn't exist, vpErr will be set — just ignore.
-  if (!vpErr && vp) {
-    (vp as any[]).forEach((p) => {
-      if (!variantPhotoMap[p.variant_id] && p.url) {
-        variantPhotoMap[p.variant_id] = p.url;
       }
-    });
-  }
-}
 
-      // Build feed items, filter to public profiles, limit to 12
-      const feed = rows
-        .filter((r) => publicProfiles.has(r.user_id))
-        .map((r) => {
-          const prof = publicProfiles.get(r.user_id)!;
-
-          const v = Array.isArray(r.variants) ? r.variants[0] : r.variants;
-          const d = Array.isArray(v?.designs) ? v.designs[0] : v?.designs;
-          const a = Array.isArray(d?.artists) ? d.artists[0] : d?.artists;
-
-          const ownershipImg = ownershipPhotoMap[r.id];
-const variantImg = v?.id ? variantPhotoMap[v.id] : null;
-const designImg = d?.primary_photo_url || null;
-
-return {
-  ownership_id: r.id,
-  created_at: r.created_at,
-  username: prof.username,
-  avatar_url: prof.avatar_url,
-  artist_name: a?.name || "Unknown artist",
-  year: d?.year ?? null,
-  title: d?.title || "Untitled",
-  design_id: d?.id,
-  base_color: v?.base_color || null,
-  garment_type: v?.garment_type || null,
-  image_url: ownershipImg || variantImg || designImg,
-};
-        })
-        .slice(0, 12);
-
-      setRecent(feed);
-
-            // ---------- top artists by total ownership ----------
+      // ---------- top artists by total ownership ----------
       const { data: topData } = await supabase
         .from("artist_ownership_counts")
-        .select("artist_id, artist_name, artist_slug, photo_url, origin_country, primary_genre, owned_count")
+        .select(
+          "artist_id, artist_name, artist_slug, photo_url, origin_country, primary_genre, owned_count"
+        )
         .order("owned_count", { ascending: false })
         .limit(10);
 
@@ -228,10 +230,13 @@ return {
 
   return (
     <main
-  className="home"
-  style={{ padding: "3rem 2rem", maxWidth: 900, margin: "0 auto" }}
->
-      <div className="home-hero" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      className="home-page"
+      style={{ padding: "3rem 2rem", maxWidth: 900, margin: "0 auto" }}
+    >
+      <div
+        className="home-title-row"
+        style={{ display: "flex", alignItems: "center", gap: 12 }}
+      >
         <div
           style={{
             width: 14,
@@ -253,9 +258,13 @@ return {
         </h1>
       </div>
 
-      <p className="home-subtitle" style={{ marginTop: 14, color: "#666", lineHeight: 1.6, maxWidth: 720 }}>
-        A clean, collector-first database for band merch—catalog designs, track variants,
-        document your personal items, and preserve the story of how you got them.
+      <p
+        className="home-subtitle"
+        style={{ marginTop: 14, color: "#666", lineHeight: 1.6, maxWidth: 720 }}
+      >
+        A clean, collector-first database for band merch—catalog designs, track
+        variants, document your personal items, and preserve the story of how you
+        got them.
       </p>
 
       {/* Stats */}
@@ -292,7 +301,10 @@ return {
       </div>
 
       {/* Quick actions */}
-      <div className="home-actions" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
+      <div
+        className="home-actions"
+        style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}
+      >
         <a href="/artists">
           <button className="button-primary">Browse artists</button>
         </a>
@@ -393,22 +405,22 @@ return {
                       <div style={{ fontSize: 12, color: "#666" }}>
                         Added by{" "}
                         <span
-  role="link"
-  tabIndex={0}
-  onClick={(e) => {
-    e.stopPropagation();
-    window.location.href = `/u/${r.username}`;
-  }}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.stopPropagation();
-      window.location.href = `/u/${r.username}`;
-    }
-  }}
-  style={{ cursor: "pointer", color: "inherit" }}
->
-  <strong>{r.username}</strong>
-</span>
+                          role="link"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = `/u/${r.username}`;
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.stopPropagation();
+                              window.location.href = `/u/${r.username}`;
+                            }
+                          }}
+                          style={{ cursor: "pointer", color: "inherit" }}
+                        >
+                          <strong>{r.username}</strong>
+                        </span>
                       </div>
 
                       <div style={{ fontWeight: 700, lineHeight: 1.2 }}>
@@ -436,104 +448,120 @@ return {
         )}
 
         {/* Top artists */}
-<div style={{ marginTop: 22 }}>
-  <h2 style={{ margin: "0 0 10px 0" }}>Top artists by total ownership</h2>
+        <div style={{ marginTop: 22 }}>
+          <h2 style={{ margin: "0 0 10px 0" }}>Top artists by total ownership</h2>
 
-  {topArtists.length ? (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-        gap: 14,
-        marginTop: 8,
-      }}
-    >
-      {topArtists.map((a) => (
-        <a
-          key={a.artist_id}
-          href={`/artists/${a.artist_slug}`}
-          style={{ textDecoration: "none", color: "inherit" }}
-        >
-          <div
-            className="artist-card"
-            style={{
-              display: "flex",
-              gap: 12,
-              alignItems: "center",
-              padding: 12,
-              border: "1px solid #eee",
-              borderRadius: 12,
-              background: "#fff",
-            }}
-          >
-            {a.photo_url ? (
-              <img
-                src={a.photo_url}
-                alt={`${a.artist_name} photo`}
-                style={{
-                  width: 54,
-                  height: 54,
-                  borderRadius: 10,
-                  objectFit: "cover",
-                  border: "1px solid #e0e0e0",
-                  background: "#f2f2f2",
-                  flex: "0 0 auto",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 54,
-                  height: 54,
-                  borderRadius: 10,
-                  border: "1px solid #e0e0e0",
-                  background: "#f2f2f2",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#777",
-                  fontSize: 12,
-                  flex: "0 0 auto",
-                }}
-              >
-                —
-              </div>
-            )}
-
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 700, display: "flex", gap: 8 }}>
-                <span
-                  style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
+          {topArtists.length ? (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+                gap: 14,
+                marginTop: 8,
+              }}
+            >
+              {topArtists.map((a) => (
+                <a
+                  key={a.artist_id}
+                  href={`/artists/${a.artist_slug}`}
+                  style={{ textDecoration: "none", color: "inherit" }}
                 >
-                  {a.artist_name}
-                </span>
+                  <div
+                    className="artist-card"
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                      padding: 12,
+                      border: "1px solid #eee",
+                      borderRadius: 12,
+                      background: "#fff",
+                    }}
+                  >
+                    {a.photo_url ? (
+                      <img
+                        src={a.photo_url}
+                        alt={`${a.artist_name} photo`}
+                        style={{
+                          width: 54,
+                          height: 54,
+                          borderRadius: 10,
+                          objectFit: "cover",
+                          border: "1px solid #e0e0e0",
+                          background: "#f2f2f2",
+                          flex: "0 0 auto",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 54,
+                          height: 54,
+                          borderRadius: 10,
+                          border: "1px solid #e0e0e0",
+                          background: "#f2f2f2",
+                          display: "grid",
+                          placeItems: "center",
+                          color: "#777",
+                          fontSize: 12,
+                          flex: "0 0 auto",
+                        }}
+                      >
+                        —
+                      </div>
+                    )}
 
-                <span style={{ color: "#777", fontSize: 12, whiteSpace: "nowrap" }}>
-                  {a.owned_count}
-                </span>
-              </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, display: "flex", gap: 8 }}>
+                        <span
+                          style={{
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {a.artist_name}
+                        </span>
 
-              {(a.origin_country || a.primary_genre) && (
-                <div style={{ color: "#777", fontSize: 13, marginTop: 4 }}>
-                  {[a.origin_country, a.primary_genre].filter(Boolean).join(" · ")}
-                </div>
-              )}
+                        <span
+                          style={{
+                            color: "#777",
+                            fontSize: 12,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {a.owned_count}
+                        </span>
+                      </div>
+
+                      {(a.origin_country || a.primary_genre) && (
+                        <div style={{ color: "#777", fontSize: 13, marginTop: 4 }}>
+                          {[a.origin_country, a.primary_genre]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </a>
+              ))}
             </div>
-          </div>
-        </a>
-      ))}
-    </div>
-  ) : (
-    <p style={{ color: "#666", marginTop: 8 }}>No ownership data yet.</p>
-  )}
-</div>
+          ) : (
+            <p style={{ color: "#666", marginTop: 8 }}>No ownership data yet.</p>
+          )}
+        </div>
 
-<p className="home-footer" style={{ marginTop: 18, color: "#777", fontSize: 13, lineHeight: 1.6 }}>
-  Minimal by design. Community maintained. Built for collectors.
-</p>
+        <p
+          className="home-footer"
+          style={{
+            marginTop: 18,
+            color: "#777",
+            fontSize: 13,
+            lineHeight: 1.6,
+          }}
+        >
+          Minimal by design. Community maintained. Built for collectors.
+        </p>
       </div>
     </main>
   );
