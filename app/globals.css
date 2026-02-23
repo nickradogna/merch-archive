@@ -755,3 +755,70 @@ input, textarea, select, button {
     width: 100%;
   }
 }
+
+/* --- Variant action buttons (Design page) --- */
+.variant-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.variant-actions button {
+  width: auto;          /* prevents full-width stacking */
+  margin: 0;            /* avoids weird vertical gaps */
+  white-space: nowrap;  /* keeps labels from wrapping */
+}
+
+/* --- Mobile-friendly upload row --- */
+.upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.upload-row input[type="text"],
+.upload-row input[type="file"] {
+  margin: 0 !important; /* remove inherited spacing */
+}
+
+.upload-row button {
+  margin: 0 !important; /* stops it from drifting far down */
+}
+
+/* Make the file picker look like a button */
+.upload-row input[type="file"]::file-selector-button {
+  border: 1px solid #ddd;
+  background: #fff;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+/* Safari fallback */
+.upload-row input[type="file"]::-webkit-file-upload-button {
+  border: 1px solid #ddd;
+  background: #fff;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+@media (max-width: 640px) {
+  .upload-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .upload-row input[type="text"],
+  .upload-row input[type="file"],
+  .upload-row button {
+    width: 100%;
+  }
+}
