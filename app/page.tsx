@@ -262,7 +262,7 @@ export default function HomePage() {
         className="home-subtitle"
         style={{ marginTop: 14, color: "#666", lineHeight: 1.6, maxWidth: 720 }}
       >
-        A clean, collector-first database for band merch—catalog designs, track
+        A clean, collector-first database for band merch. Catalog designs, track
         variants, document your personal items, and preserve the story of how you
         got them.
       </p>
